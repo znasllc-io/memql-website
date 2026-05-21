@@ -1,0 +1,15 @@
+.git
+.github
+.gitignore
+.claude
+.next
+.DS_Store
+node_modules
+out
+dist
+*.log
+.env*.local
+README.md
+Dockerfile
+.dockerignore
+nginx.conf
