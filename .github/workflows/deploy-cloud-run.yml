@@ -7,7 +7,7 @@ on:
 
 # Edit these to match your GCP setup before the first push.
 env:
-  PROJECT_ID: znas-io
+  PROJECT_ID: memql-website   # GCP project ID
   REGION:     us-central1
   REPOSITORY: memql-website   # Artifact Registry repository
   SERVICE:    memql-website   # Cloud Run service name
