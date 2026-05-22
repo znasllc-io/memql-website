@@ -425,6 +425,7 @@ function ComparisonSlider() {
 
     let played = false;
     let rafId = 0;
+    let failsafeTimer: ReturnType<typeof setTimeout> | undefined;
     let triggerY = 0;
     let lastY = window.scrollY;
     let release: (() => void) | null = null;
@@ -439,6 +440,7 @@ function ComparisonSlider() {
       [ 5, 95, 850],
       [95, 50, 550],
     ];
+    const TOTAL_DURATION = segments.reduce((s, [, , d]) => s + d, 0);
     let segIdx = 0;
     let segStart: number | null = null;
     const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -491,32 +493,46 @@ function ComparisonSlider() {
 
       // Pin the section to the viewport. Scroll input continues to
       // register on the body underneath — scrollbar moves, momentum
-      // decays, wheel events fire normally.
+      // decays, wheel events fire normally. The section is now opaque
+      // so content scrolling behind it doesn't ghost through.
       const saved = {
-        position: section.style.position,
-        top: section.style.top,
-        left: section.style.left,
-        right: section.style.right,
-        width: section.style.width,
-        zIndex: section.style.zIndex,
+        position:        section.style.position,
+        top:             section.style.top,
+        left:            section.style.left,
+        right:           section.style.right,
+        width:           section.style.width,
+        zIndex:          section.style.zIndex,
+        backgroundColor: section.style.backgroundColor,
       };
-      section.style.position = "fixed";
-      section.style.top = "80px";
-      section.style.left = "0";
-      section.style.right = "0";
-      section.style.width = "100%";
-      section.style.zIndex = "40";
+      section.style.position        = "fixed";
+      section.style.top             = "80px";
+      section.style.left            = "0";
+      section.style.right           = "0";
+      section.style.width           = "100%";
+      section.style.zIndex          = "40";
+      section.style.backgroundColor = "var(--color-bg)";
 
       release = () => {
-        section.style.position = saved.position;
-        section.style.top = saved.top;
-        section.style.left = saved.left;
-        section.style.right = saved.right;
-        section.style.width = saved.width;
-        section.style.zIndex = saved.zIndex;
-        placeholder.remove();
+        section.style.position        = saved.position;
+        section.style.top             = saved.top;
+        section.style.left            = saved.left;
+        section.style.right           = saved.right;
+        section.style.width           = saved.width;
+        section.style.zIndex          = saved.zIndex;
+        section.style.backgroundColor = saved.backgroundColor;
+        if (placeholder.isConnected) placeholder.remove();
+        if (failsafeTimer) clearTimeout(failsafeTimer);
         release = null;
       };
+
+      // FAILSAFE: if playFrame never reaches the "done" branch (React
+      // re-mount race, tab inactive long enough that RAF stalls, etc.)
+      // a setTimeout forces release after the animation's total
+      // duration plus a small buffer. Belt-and-suspenders for the
+      // ghost-overlay bug where the pin persisted indefinitely.
+      failsafeTimer = setTimeout(() => {
+        if (release) release();
+      }, TOTAL_DURATION + 300);
 
       rafId = requestAnimationFrame(playFrame);
     };
@@ -529,6 +545,7 @@ function ComparisonSlider() {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", recalc);
       if (rafId) cancelAnimationFrame(rafId);
+      if (failsafeTimer) clearTimeout(failsafeTimer);
       if (release) release();
     };
   }, []);
