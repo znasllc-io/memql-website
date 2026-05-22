@@ -185,7 +185,7 @@ function Nav() {
     <header className="sticky top-4 z-50 mx-auto w-full max-w-[1180px] px-4">
       <nav className="flex items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md">
         <a href="#top" className="flex items-center gap-2.5">
-          <Image src="/icon.png" alt="" width={26} height={26} priority className="h-[26px] w-[26px] rotate-180" />
+          <Image src="/icon.png" alt="" width={26} height={26} priority className="h-[26px] w-[26px]" />
           <span className="font-mono text-[14px] tracking-wide text-fg">
             MemQL<span className="text-accent">.</span>
           </span>
