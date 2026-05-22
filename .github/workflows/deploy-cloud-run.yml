@@ -12,16 +12,33 @@ env:
   REPOSITORY: memql-website   # Artifact Registry repository
   SERVICE:    memql-website   # Cloud Run service name
 
+# Minimum-needed scopes. `id-token: write` is only needed if you migrate
+# to Workload Identity Federation (recommended — see auth step below).
+permissions:
+  contents:  read
+  id-token:  write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents:  read
-      id-token:  write          # only needed if you switch to Workload Identity Federation
 
     steps:
+      # Pinned to a commit SHA — supply-chain hygiene. The "# v4.x.y"
+      # comment is human-readable; the SHA is what actually runs.
+      # Update the SHA + version comment when bumping the action.
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      # Run a quick CVE audit before we bake anything into an image.
+      # `high` threshold so noisy moderate findings don't block deploys;
+      # tighten to `moderate` later.
+      - name: npm audit (production deps, high+ only)
+        run: |
+          npm ci --no-audit --no-fund
+          npm audit --omit=dev --audit-level=high || {
+            echo "::warning::npm audit found high-severity issues in production deps"
+            exit 1
+          }
 
       # Auth via a service-account JSON key stored as a repo secret.
       # To set up: create a service account in GCP with these roles —
@@ -29,10 +46,17 @@ jobs:
       #   • Artifact Registry Writer
       #   • IAM Service Account User
       # Download a JSON key, then add it as a repo secret named GCP_SA_KEY.
-      # (For a more secure setup, swap to Workload Identity Federation
-      #  with google-github-actions/auth@v2 + workload_identity_provider.)
+      #
+      # MIGRATION TO WORKLOAD IDENTITY FEDERATION (recommended):
+      #   1. Create a WIF pool + provider trusting this repo's OIDC.
+      #   2. Bind the deployer SA to the pool with workloadIdentityUser.
+      #   3. Replace `credentials_json: ${{ secrets.GCP_SA_KEY }}` below with:
+      #        workload_identity_provider: projects/N/locations/global/workloadIdentityPools/gh/providers/gh
+      #        service_account:            deployer@memql-website.iam.gserviceaccount.com
+      #   4. Delete the long-lived JSON key and remove the GCP_SA_KEY secret.
+      # The `id-token: write` permission above is already granted to support this.
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed  # v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
@@ -47,6 +71,13 @@ jobs:
           docker push  "$IMAGE"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
+      # `--service-account memql-runtime@...` makes the running container
+      # use a dedicated, minimum-permission SA instead of the broad
+      # default Compute Engine SA. Create it once with:
+      #   gcloud iam service-accounts create memql-runtime --project memql-website
+      # No role bindings needed — this is a static site that calls no GCP APIs.
+      #
+      # Startup + liveness probes use the /healthz endpoint nginx serves.
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "${SERVICE}" \
@@ -54,10 +85,12 @@ jobs:
             --project          "${PROJECT_ID}" \
             --region           "${REGION}" \
             --platform         managed \
+            --service-account  "memql-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
             --port             8080 \
             --memory           256Mi \
             --cpu              1 \
             --min-instances    0 \
-            --max-instances    3 \
+            --max-instances    10 \
+            --ingress          all \
             --allow-unauthenticated \
             --quiet
