@@ -71,13 +71,21 @@ jobs:
           docker push  "$IMAGE"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
-      # `--service-account memql-runtime@...` makes the running container
-      # use a dedicated, minimum-permission SA instead of the broad
-      # default Compute Engine SA. Create it once with:
-      #   gcloud iam service-accounts create memql-runtime --project memql-website
-      # No role bindings needed — this is a static site that calls no GCP APIs.
+      # TODO: enable a dedicated, minimum-permission runtime SA instead
+      # of the default Compute Engine SA. Setup (~30s of gcloud), then
+      # uncomment the --service-account line below:
       #
-      # Startup + liveness probes use the /healthz endpoint nginx serves.
+      #   gcloud iam service-accounts create memql-runtime \
+      #       --project memql-website
+      #
+      #   gcloud iam service-accounts add-iam-policy-binding \
+      #       memql-runtime@memql-website.iam.gserviceaccount.com \
+      #       --member="serviceAccount:github-actions-deploy@memql-website.iam.gserviceaccount.com" \
+      #       --role="roles/iam.serviceAccountUser" \
+      #       --project=memql-website
+      #
+      # The runtime SA needs NO role bindings — this is a static site
+      # that calls zero GCP APIs.
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "${SERVICE}" \
@@ -85,7 +93,6 @@ jobs:
             --project          "${PROJECT_ID}" \
             --region           "${REGION}" \
             --platform         managed \
-            --service-account  "memql-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
             --port             8080 \
             --memory           256Mi \
             --cpu              1 \
@@ -94,3 +101,5 @@ jobs:
             --ingress          all \
             --allow-unauthenticated \
             --quiet
+          # Uncomment once memql-runtime SA exists (see TODO above):
+          #   --service-account "memql-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
