@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef, useCallback, useEffect } from "react";
+import { memo, useState, useRef, useCallback, useEffect, useMemo } from "react";
 
 /* ───────────────────────────── data ───────────────────────────── */
 
@@ -183,7 +183,7 @@ export default function Home() {
 function Nav() {
   return (
     <header className="sticky top-4 z-50 mx-auto w-full max-w-[1180px] px-4">
-      <nav className="flex items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md">
+      <nav aria-label="Primary" className="flex items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md">
         <a href="#top" className="flex items-center gap-2.5">
           <Image src="/icon.png" alt="" width={26} height={26} priority className="h-[26px] w-[26px]" />
           <span className="font-mono text-[14px] tracking-wide text-fg">
@@ -274,19 +274,19 @@ function What() {
       </Lede>
       <div className="mt-14 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
         <div>
-          <Label tone="accent">// time-series</Label>
+          <Label tone="accent" as="h3">// time-series</Label>
           <p className="text-[16px] leading-[1.65] text-fg">
             Because agents have memory. TimescaleDB hypertables underneath. Every row keyed by <Inline>(partition, id, createdAt)</Inline> &mdash; history is a first-class index, not a log file.
           </p>
         </div>
         <div>
-          <Label tone="accent">// event-driven</Label>
+          <Label tone="accent" as="h3">// event-driven</Label>
           <p className="text-[16px] leading-[1.65] text-fg">
             Because agents react. Every mutation emits <Inline>node.created</Inline> or <Inline>node.updated</Inline>. Automations subscribe via <Inline>@trigger</Inline>. No polling, no glue, no message bus to operate.
           </p>
         </div>
         <div>
-          <Label tone="accent">// multi-tenant</Label>
+          <Label tone="accent" as="h3">// multi-tenant</Label>
           <p className="text-[16px] leading-[1.65] text-fg">
             Because each customer is their own world. Partition-isolated storage at the row level. Cluster-wide concepts (identity, topology) live in <Inline>_system</Inline>.
           </p>
@@ -315,7 +315,7 @@ function How() {
       </Lede>
       <div className="mt-14 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16">
         <div>
-          <Label>// layers</Label>
+          <Label as="h3">// layers</Label>
           <pre className="mt-1 overflow-x-auto whitespace-pre font-mono text-[13px] leading-[1.85] text-muted">
 {`  `}<span className="text-fg">.memql files</span>{`                authored as plain text
         `}<span className="text-accent">↓</span>{`
@@ -326,7 +326,7 @@ function How() {
           </pre>
         </div>
         <div>
-          <Label>// five node binaries</Label>
+          <Label as="h3">// five node binaries</Label>
           <ul className="mt-1 space-y-3.5">
             {nodes.map(([name, role, note]) => (
               <li key={name} className="grid grid-cols-[110px_minmax(0,1fr)] items-baseline gap-x-4">
@@ -399,9 +399,11 @@ function ComparisonSlider() {
   }, []);
 
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "ArrowLeft")  { e.preventDefault(); setPct((p) => Math.max(4, p - 4)); }
-    if (e.key === "ArrowRight") { e.preventDefault(); setPct((p) => Math.min(96, p + 4)); }
-    if (e.key === "Home")       { e.preventDefault(); setPct(4); }
+    if (e.key === "ArrowLeft")  { e.preventDefault(); setPct((p) => Math.max(4,  p -  4)); }
+    if (e.key === "ArrowRight") { e.preventDefault(); setPct((p) => Math.min(96, p +  4)); }
+    if (e.key === "PageDown")   { e.preventDefault(); setPct((p) => Math.max(4,  p - 10)); }
+    if (e.key === "PageUp")     { e.preventDefault(); setPct((p) => Math.min(96, p + 10)); }
+    if (e.key === "Home")       { e.preventDefault(); setPct(4);  }
     if (e.key === "End")        { e.preventDefault(); setPct(96); }
   }, []);
 
@@ -581,22 +583,24 @@ function ComparisonSlider() {
 
         {/* slider handle — vertical line, drags horizontally */}
         <div
-          role="separator"
-          aria-orientation="vertical"
+          role="slider"
+          aria-label="Code comparison divider"
+          aria-orientation="horizontal"
           aria-valuenow={Math.round(pct)}
-          aria-valuemin={0}
-          aria-valuemax={100}
+          aria-valuemin={4}
+          aria-valuemax={96}
+          aria-valuetext={`${Math.round(pct)} percent — ${pct > 50 ? "Python view" : "MemQL view"} dominant`}
           tabIndex={0}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onKeyDown={onKeyDown}
-          className="group absolute inset-y-0 z-20 flex cursor-col-resize items-center justify-center touch-none focus:outline-none"
+          className="group absolute inset-y-0 z-20 flex cursor-col-resize items-center justify-center touch-none rounded outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg-elev"
           style={{ left: `calc(${pct}% - 14px)`, width: 28 }}
         >
           <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-accent/60 group-hover:bg-accent transition-colors" />
           <div className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full border border-accent-deep bg-bg-elev shadow-[0_0_0_6px_rgba(74,222,128,0.10)] group-hover:shadow-[0_0_0_8px_rgba(74,222,128,0.15)] transition-shadow">
-            <span className="font-mono text-[14px] leading-none text-accent">⇆</span>
+            <span aria-hidden="true" className="font-mono text-[14px] leading-none text-accent">⇆</span>
           </div>
         </div>
       </div>
@@ -608,7 +612,21 @@ function ComparisonSlider() {
 
 function Language() {
   const [active, setActive] = useState<ConstructName>("concept");
-  const item = CONSTRUCTS.find((c) => c.name === active)!;
+  const item = CONSTRUCTS.find((c) => c.name === active) ?? CONSTRUCTS[0];
+
+  // WAI-ARIA APG tablist: arrow keys cycle, Home/End jump to ends,
+  // focus follows selection.
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, i: number) => {
+    let next = -1;
+    if (e.key === "ArrowRight") next = (i + 1) % CONSTRUCTS.length;
+    if (e.key === "ArrowLeft")  next = (i - 1 + CONSTRUCTS.length) % CONSTRUCTS.length;
+    if (e.key === "Home")       next = 0;
+    if (e.key === "End")        next = CONSTRUCTS.length - 1;
+    if (next === -1) return;
+    e.preventDefault();
+    setActive(CONSTRUCTS[next].name);
+    document.getElementById(`tab-${CONSTRUCTS[next].name}`)?.focus();
+  };
 
   return (
     <Section eyebrow="the language">
@@ -619,15 +637,25 @@ function Language() {
 
       <div className="mt-12 overflow-hidden rounded-lg border border-border bg-bg-elev">
         {/* tabs */}
-        <div className="grid grid-cols-4 border-b border-border sm:grid-cols-8">
-          {CONSTRUCTS.map((c) => {
+        <div
+          role="tablist"
+          aria-label="MemQL DSL constructs"
+          className="grid grid-cols-4 border-b border-border sm:grid-cols-8"
+        >
+          {CONSTRUCTS.map((c, i) => {
             const isActive = c.name === active;
             return (
               <button
                 key={c.name}
+                id={`tab-${c.name}`}
                 type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`tabpanel-${c.name}`}
+                tabIndex={isActive ? 0 : -1}
                 onClick={() => setActive(c.name)}
-                className={`-mb-px border-b-2 px-3 py-3.5 font-mono text-[12.5px] tracking-wide transition-colors ${
+                onKeyDown={(e) => onTabKeyDown(e, i)}
+                className={`-mb-px border-b-2 px-3 py-3.5 font-mono text-[12.5px] tracking-wide outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
                   isActive
                     ? "border-accent bg-accent-soft text-accent"
                     : "border-transparent text-muted hover:bg-bg/40 hover:text-fg"
@@ -649,10 +677,17 @@ function Language() {
           </span>
         </div>
 
-        {/* code */}
-        <pre className="min-h-[440px] overflow-x-auto px-6 py-6 font-mono text-[12.5px] leading-[1.75]">
-          <CodeBlock code={item.code} lang="memql" />
-        </pre>
+        {/* code panel */}
+        <div
+          role="tabpanel"
+          id={`tabpanel-${item.name}`}
+          aria-labelledby={`tab-${item.name}`}
+          tabIndex={0}
+        >
+          <pre className="min-h-[440px] overflow-x-auto px-6 py-6 font-mono text-[12.5px] leading-[1.75]">
+            <CodeBlock code={item.code} lang="memql" />
+          </pre>
+        </div>
       </div>
     </Section>
   );
@@ -678,9 +713,16 @@ function Cockpit() {
         Terminal-native IDE and operations console for MemQL clusters. Write, lint, and execute DSL; explore cluster state; manage identity and workers; observe the platform in real time. No web app. No Electron. Just gRPC to the cluster.
       </Lede>
 
-      {/* TUI mock — box-drawing chars, sidebar layout, keybind bar */}
-      <div className="mt-12 overflow-x-auto rounded-md bg-bg-elev px-3 py-5">
-        <pre className="mx-auto inline-block font-mono text-[13px] leading-[1.55] text-muted">
+      {/* TUI mock — box-drawing chars, sidebar layout, keybind bar.
+          Wrapped in <figure role="img"> so screen readers announce it
+          as a single image with a meaningful caption rather than spelling
+          out every box-drawing glyph individually. */}
+      <figure
+        role="img"
+        aria-label="MemQL Cockpit TUI mockup: eight-tab terminal interface with the 'agents' tab active, showing four connected participants — sofia, claude-sonnet-4.6, planner-01, mac-mini-pool — and a keybind bar at the bottom."
+        className="mt-12 overflow-x-auto rounded-md bg-bg-elev px-3 py-5"
+      >
+        <pre aria-hidden="true" className="mx-auto inline-block font-mono text-[13px] leading-[1.55] text-muted">
 {`┌──────────────────────────────────────────────────────────────────────────┐
 │ `}<span className="text-fg">memql-cockpit</span>{`                                 `}<span className="text-accent">connected</span>{` · 4 agents      │
 ├──────────────┬───────────────────────────────────────────────────────────┤
@@ -697,11 +739,11 @@ function Cockpit() {
 │  `}<span className="text-accent">q</span>{`:quit  `}<span className="text-accent">↑↓</span>{`:nav  `}<span className="text-accent">Tab</span>{`:next-pane  `}<span className="text-accent">e</span>{`:edit  `}<span className="text-accent">/</span>{`:search  `}<span className="text-accent">?</span>{`:help                 │
 └──────────────────────────────────────────────────────────────────────────┘`}
         </pre>
-      </div>
+      </figure>
 
       {/* eight tabs */}
       <div className="mt-14">
-        <Label>// eight tabs</Label>
+        <Label as="h3">// eight tabs</Label>
         <div className="mt-3 grid grid-cols-1 gap-x-12 gap-y-3.5 sm:grid-cols-2">
           {tabs.map(([tab, desc]) => (
             <div key={tab} className="grid grid-cols-[110px_minmax(0,1fr)] items-baseline gap-x-4">
@@ -715,13 +757,13 @@ function Cockpit() {
       {/* computer use + install */}
       <div className="mt-14 grid grid-cols-1 gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
         <div>
-          <Label tone="accent">// computer use</Label>
+          <Label tone="accent" as="h3">// computer use</Label>
           <p className="text-[16px] leading-[1.65] text-fg">
             Run <Inline>./bin/memql-cockpit worker run</Inline> and your machine joins the cluster as a per-user worker. Two modes &mdash; <Inline>computer_use_headless</Inline> for shell, filesystem, and HTTP; <Inline>computer_use_embodied</Inline> (CGO build via <Inline>make cockpit-gui</Inline>) for mouse, keyboard, and screenshots through RobotGo. The agent doesn&rsquo;t drive a sandbox. It drives your laptop.
           </p>
         </div>
         <div>
-          <Label tone="accent">// install</Label>
+          <Label tone="accent" as="h3">// install</Label>
           <pre className="overflow-x-auto font-mono text-[12.5px] leading-[1.85] text-fg-dim">
 {`$ `}<span className="text-accent">make</span>{` cockpit
 $ `}<span className="text-accent">./bin/memql-cockpit</span>
@@ -770,7 +812,7 @@ function ForWhom() {
       <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-3">
         {items.map((it) => (
           <div key={it.label}>
-            <Label tone="accent">{it.label}</Label>
+            <Label tone="accent" as="h3">{it.label}</Label>
             <p className="text-[16px] leading-[1.65] text-fg">{it.body}</p>
           </div>
         ))}
@@ -811,7 +853,7 @@ function Footer() {
           </span>
         </div>
         <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-dim">
-          prototype · 2026
+          prototype · {new Date().getFullYear()}
         </span>
       </div>
     </footer>
@@ -822,19 +864,18 @@ function Footer() {
 
 function Section({
   eyebrow,
-  narrow = false,
   id,
   children,
 }: {
   eyebrow: string;
-  narrow?: boolean;
   id?: string;
   children: React.ReactNode;
 }) {
+  const labelId = `section-eyebrow-${id ?? eyebrow.replace(/[^a-z0-9]/gi, "-")}`;
   return (
-    <section id={id} className="border-t border-border">
-      <div className={`mx-auto px-8 py-28 ${narrow ? "max-w-[760px]" : "max-w-[1180px]"}`}>
-        <Eyebrow>{eyebrow}</Eyebrow>
+    <section id={id} aria-labelledby={labelId} className="border-t border-border">
+      <div className="mx-auto max-w-[1180px] px-8 py-28">
+        <Eyebrow id={labelId}>{eyebrow}</Eyebrow>
         <div className="mt-6">{children}</div>
       </div>
     </section>
@@ -852,14 +893,28 @@ function GithubMenu({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const item0Ref = useRef<HTMLAnchorElement>(null);
+  const item1Ref = useRef<HTMLAnchorElement>(null);
+
+  // Move focus into the menu on open; return to trigger on close.
+  useEffect(() => {
+    if (open) {
+      item0Ref.current?.focus();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
+    const close = () => {
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
     const onDocClick = (e: MouseEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") close();
     };
     document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onEsc);
@@ -869,28 +924,60 @@ function GithubMenu({
     };
   }, [open]);
 
+  const onItemKey = (e: React.KeyboardEvent, idx: number) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const target = idx === 0 ? item1Ref : item0Ref;
+      target.current?.focus();
+    }
+    if (e.key === "Home") {
+      e.preventDefault();
+      item0Ref.current?.focus();
+    }
+    if (e.key === "End") {
+      e.preventDefault();
+      item1Ref.current?.focus();
+    }
+    if (e.key === "Tab") {
+      // Let Tab leave the menu naturally; close it on the way out.
+      setOpen(false);
+    }
+  };
+
+  const onTriggerKey = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (!open) setOpen(true);
+      else item0Ref.current?.focus();
+    }
+  };
+
   const triggerClass =
     variant === "nav"
-      ? "font-mono text-[12px] tracking-wider uppercase text-muted hover:text-fg transition-colors"
-      : "inline-flex items-center gap-2 font-mono text-[13px] tracking-wide text-accent hover:text-fg transition-colors";
+      ? "font-mono text-[12px] tracking-wider uppercase text-muted outline-none transition-colors hover:text-fg focus-visible:text-fg focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg rounded"
+      : "inline-flex items-center gap-2 font-mono text-[13px] tracking-wide text-accent outline-none transition-colors hover:text-fg focus-visible:text-fg focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg rounded";
 
   return (
     <div ref={ref} className="relative inline-block">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={onTriggerKey}
         className={triggerClass}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={`${label}: choose a repository`}
       >
         {label}{" "}
-        <span className={variant === "nav" ? "text-accent" : ""}>
+        <span aria-hidden="true" className={variant === "nav" ? "text-accent" : ""}>
           {open ? "↓" : "→"}
         </span>
       </button>
       {open && (
         <div
           role="menu"
+          aria-label="MemQL repositories"
           className={`absolute z-50 top-full mt-2 min-w-[220px] overflow-hidden rounded-md border border-border bg-bg-elev shadow-2xl ${
             align === "right"
               ? "right-0"
@@ -900,26 +987,30 @@ function GithubMenu({
           }`}
         >
           <a
+            ref={item0Ref}
             href="https://github.com/znasllc-io/MemQL"
             target="_blank"
             rel="noopener noreferrer"
-            className="block px-4 py-3 hover:bg-accent-soft transition-colors group"
+            className="block px-4 py-3 outline-none transition-colors hover:bg-accent-soft focus-visible:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset group"
             role="menuitem"
+            onKeyDown={(e) => onItemKey(e, 0)}
           >
-            <div className="font-mono text-[13px] text-fg group-hover:text-accent">
-              <span className="text-muted group-hover:text-accent">▸</span> memql
+            <div className="font-mono text-[13px] text-fg group-hover:text-accent group-focus-visible:text-accent">
+              <span aria-hidden="true" className="text-muted group-hover:text-accent group-focus-visible:text-accent">▸</span> memql
             </div>
             <div className="ml-4 mt-0.5 font-mono text-[11px] text-dim">core engine</div>
           </a>
           <a
+            ref={item1Ref}
             href="https://github.com/znasllc-io/memql-cockpit"
             target="_blank"
             rel="noopener noreferrer"
-            className="block border-t border-border px-4 py-3 hover:bg-accent-soft transition-colors group"
+            className="block border-t border-border px-4 py-3 outline-none transition-colors hover:bg-accent-soft focus-visible:bg-accent-soft focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset group"
             role="menuitem"
+            onKeyDown={(e) => onItemKey(e, 1)}
           >
-            <div className="font-mono text-[13px] text-fg group-hover:text-accent">
-              <span className="text-muted group-hover:text-accent">▸</span> memql-cockpit
+            <div className="font-mono text-[13px] text-fg group-hover:text-accent group-focus-visible:text-accent">
+              <span aria-hidden="true" className="text-muted group-hover:text-accent group-focus-visible:text-accent">▸</span> memql-cockpit
             </div>
             <div className="ml-4 mt-0.5 font-mono text-[11px] text-dim">tui ide + ops console</div>
           </a>
@@ -929,9 +1020,9 @@ function GithubMenu({
   );
 }
 
-function Eyebrow({ children, center = false }: { children: React.ReactNode; center?: boolean }) {
+function Eyebrow({ children, center = false, id }: { children: React.ReactNode; center?: boolean; id?: string }) {
   return (
-    <div className={`font-mono text-[11px] uppercase tracking-[0.22em] text-accent ${center ? "text-center" : ""}`}>
+    <div id={id} className={`font-mono text-[11px] uppercase tracking-[0.22em] text-accent ${center ? "text-center" : ""}`}>
       {children}
     </div>
   );
@@ -951,18 +1042,22 @@ function Lede({ children, className = "" }: { children: React.ReactNode; classNa
   );
 }
 
-function Body({ children }: { children: React.ReactNode }) {
-  return <p className="mt-5 text-[16px] leading-[1.65] text-fg">{children}</p>;
-}
-
 function Inline({ children }: { children: React.ReactNode }) {
   return <code className="font-mono text-[0.88em] text-fg-dim">{children}</code>;
 }
 
-function Label({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "accent" | "dim" }) {
+function Label({
+  children,
+  tone = "muted",
+  as: Tag = "div",
+}: {
+  children: React.ReactNode;
+  tone?: "muted" | "accent" | "dim";
+  as?: "div" | "h3" | "h4";
+}) {
   const cls = tone === "accent" ? "text-accent" : tone === "dim" ? "text-dim" : "text-muted";
   return (
-    <div className={`mb-3 font-mono text-[11px] uppercase tracking-[0.18em] ${cls}`}>{children}</div>
+    <Tag className={`mb-3 font-mono text-[11px] uppercase tracking-[0.18em] ${cls}`}>{children}</Tag>
   );
 }
 
@@ -1002,7 +1097,7 @@ function CodeWindow({
 
 /* ───────────────────────── code block + tokenizer ───────────────────────── */
 
-function CodeBlock({
+const CodeBlock = memo(function CodeBlock({
   code,
   lang,
   startLine = 1,
@@ -1011,20 +1106,27 @@ function CodeBlock({
   lang: "memql" | "python";
   startLine?: number;
 }) {
-  const lines = code.split("\n");
-  const width = String(startLine + lines.length - 1).length;
+  // Tokenize once per (code, lang) pair. Without this, the ComparisonSlider
+  // re-renders CodeBlock at 60fps during the 2s auto-demo and tokenizes
+  // both code strings (~50 lines × 2) every frame.
+  const tokenizedLines = useMemo(() => {
+    const lines = code.split("\n");
+    return lines.map((line) => tokenize(line, lang));
+  }, [code, lang]);
+  const width = String(startLine + tokenizedLines.length - 1).length;
   return (
     <code className="block">
-      {lines.map((line, i) => (
+      {tokenizedLines.map((tokens, i) => (
         <div key={i} className="flex">
           <span
+            aria-hidden="true"
             className="select-none pr-5 text-right text-dim"
             style={{ minWidth: `${width + 1}ch` }}
           >
             {startLine + i}
           </span>
           <span className="min-w-0 flex-1">
-            {tokenize(line, lang).map((t, j) => (
+            {tokens.map((t, j) => (
               <span key={j} className={tokenClass(t.kind)}>
                 {t.text}
               </span>
@@ -1034,7 +1136,7 @@ function CodeBlock({
       ))}
     </code>
   );
-}
+});
 
 type Kind = "annotation" | "keyword" | "string" | "number" | "comment" | "doc" | "plain";
 

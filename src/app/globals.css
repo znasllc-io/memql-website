@@ -6,8 +6,8 @@
   --color-bg-panel: #0b1110;
   --color-fg: #e8e6dd;
   --color-fg-dim: #c7c2b3;
-  --color-muted: #7a8579;
-  --color-dim: #4a5249;
+  --color-muted: #9ca395;  /* ≈7.5:1 on bg — passes WCAG AA body */
+  --color-dim:   #6c726a;  /* ≈4.0:1 on bg — passes WCAG AA large text */
   --color-accent: #4ade80;
   --color-accent-bright: #22c55e;
   --color-accent-deep: #166534;
@@ -57,3 +57,15 @@ html, body {
 ::-webkit-scrollbar-track { background: var(--color-bg); }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
+
+/* Respect users who prefer reduced motion. Zeroes out CSS animations
+   and transitions globally; the JS auto-demo already gates on this
+   media query in `page.tsx`. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:        0.01ms !important;
+    animation-iteration-count: 1      !important;
+    transition-duration:       0.01ms !important;
+    scroll-behavior:           auto   !important;
+  }
+}

@@ -31,9 +31,19 @@ npm run dev   # → http://localhost:3000
 ## Build
 
 ```bash
-npm run build
-npm start
+npm run build          # emits a static export to ./out
+npx serve out          # serve the static export locally on :3000
 ```
+
+`next start` does **not** work here — this is a static export
+(`output: 'export'` in `next.config.ts`), served by nginx in production.
+
+## Deploy
+
+Pushed to `main` → GitHub Actions builds the Docker image, pushes to
+Artifact Registry, and deploys to Cloud Run.
+See [`.github/workflows/deploy-cloud-run.yml`](.github/workflows/deploy-cloud-run.yml),
+[`Dockerfile`](Dockerfile), and [`nginx.conf`](nginx.conf).
 
 ## Structure
 
