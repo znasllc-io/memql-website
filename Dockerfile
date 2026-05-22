@@ -18,7 +18,7 @@ RUN npm run build
 # Using the unprivileged variant so the container runs as UID 101
 # instead of root — required by the project's "no root containers" policy.
 # The unprivileged image listens on 8080 by default (matches Cloud Run).
-FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS runtime
 
 # Cloud Run injects $PORT (default 8080). The official nginx images
 # auto-process /etc/nginx/templates/*.template with envsubst at start,
