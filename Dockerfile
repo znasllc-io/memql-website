@@ -2,7 +2,7 @@
 
 # ─── Build stage ──────────────────────────────────────────────────────
 # Node image builds the Next.js static export → /app/out
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 # Install deps in their own layer for better caching
