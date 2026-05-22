@@ -407,40 +407,27 @@ function ComparisonSlider() {
     if (e.key === "End")        { e.preventDefault(); setPct(96); }
   }, []);
 
-  /* ── auto-demo: scroll-pinned section. ──────────────────────────────
-     When window.scrollY crosses the Y where the compare section's top
-     sits 80px below the viewport, the section becomes position:fixed
-     at top:80 while a placeholder fills its space in flow. The rest
-     of the page keeps scrolling normally — wheel/touch/scrollbar all
-     stay responsive. The section just visually pins to the viewport
-     for the ~2s the animation plays, then releases. The user ends up
-     wherever their accumulated scroll took them. Fires once, respects
-     prefers-reduced-motion. */
+  /* ── auto-demo: in-place animation on scroll-in. ───────────────────
+     When ≥50% of the slider window is visible, play the divider
+     middle → 5% → 95% → middle wipe (~2s). No scroll lock, no pin,
+     no DOM manipulation — just animates `pct` state. If the user
+     scrolls past mid-animation, they miss the end; that's fine.
+     Fires once. Respects prefers-reduced-motion. */
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const section = document.getElementById("compare");
-    if (!section) return;
+    const target = containerRef.current;
+    if (!target) return;
 
     let played = false;
     let rafId = 0;
-    let failsafeTimer: ReturnType<typeof setTimeout> | undefined;
-    let triggerY = 0;
-    let lastY = window.scrollY;
-    let release: (() => void) | null = null;
-
-    const recalc = () => {
-      const rect = section.getBoundingClientRect();
-      triggerY = window.scrollY + rect.top - 80;
-    };
 
     const segments: [number, number, number][] = [
       [50,  5, 650],
       [ 5, 95, 850],
       [95, 50, 550],
     ];
-    const TOTAL_DURATION = segments.reduce((s, [, , d]) => s + d, 0);
     let segIdx = 0;
     let segStart: number | null = null;
     const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -448,7 +435,6 @@ function ComparisonSlider() {
     const playFrame = (now: number) => {
       if (segIdx >= segments.length) {
         setPct(50);
-        if (release) release();
         return;
       }
       if (segStart === null) segStart = now;
@@ -463,90 +449,23 @@ function ComparisonSlider() {
       rafId = requestAnimationFrame(playFrame);
     };
 
-    const onScroll = () => {
-      if (played) return;
-      const currentY = window.scrollY;
-      const crossedDown = lastY < triggerY && currentY >= triggerY;
-      lastY = currentY;
-      if (!crossedDown) return;
-
-      played = true;
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", recalc);
-
-      // If user has overshot, snap to triggerY first so the section
-      // pins at the consistent visual position. This is instant — a
-      // smooth scroll would fight with the user's ongoing fling.
-      if (window.scrollY > triggerY + 5) {
-        window.scrollTo({ top: triggerY, behavior: "auto" });
-      }
-
-      // Place an invisible placeholder of equal height where the
-      // section was, so flow content below doesn't jump up when the
-      // section becomes position:fixed.
-      const sectionHeight = section.offsetHeight;
-      const placeholder = document.createElement("div");
-      placeholder.style.height = `${sectionHeight}px`;
-      placeholder.setAttribute("aria-hidden", "true");
-      placeholder.setAttribute("data-pin-placeholder", "true");
-      section.parentNode?.insertBefore(placeholder, section);
-
-      // Pin the section to the viewport. Scroll input continues to
-      // register on the body underneath — scrollbar moves, momentum
-      // decays, wheel events fire normally. The section is now opaque
-      // so content scrolling behind it doesn't ghost through.
-      const saved = {
-        position:        section.style.position,
-        top:             section.style.top,
-        left:            section.style.left,
-        right:           section.style.right,
-        width:           section.style.width,
-        zIndex:          section.style.zIndex,
-        backgroundColor: section.style.backgroundColor,
-      };
-      section.style.position        = "fixed";
-      section.style.top             = "80px";
-      section.style.left            = "0";
-      section.style.right           = "0";
-      section.style.width           = "100%";
-      section.style.zIndex          = "40";
-      section.style.backgroundColor = "var(--color-bg)";
-
-      release = () => {
-        section.style.position        = saved.position;
-        section.style.top             = saved.top;
-        section.style.left            = saved.left;
-        section.style.right           = saved.right;
-        section.style.width           = saved.width;
-        section.style.zIndex          = saved.zIndex;
-        section.style.backgroundColor = saved.backgroundColor;
-        if (placeholder.isConnected) placeholder.remove();
-        if (failsafeTimer) clearTimeout(failsafeTimer);
-        release = null;
-      };
-
-      // FAILSAFE: if playFrame never reaches the "done" branch (React
-      // re-mount race, tab inactive long enough that RAF stalls, etc.)
-      // a setTimeout forces release after the animation's total
-      // duration plus a small buffer. Belt-and-suspenders for the
-      // ghost-overlay bug where the pin persisted indefinitely.
-      failsafeTimer = setTimeout(() => {
-        if (release) release();
-      }, TOTAL_DURATION + 300);
-
-      rafId = requestAnimationFrame(playFrame);
-    };
-
-    recalc();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", recalc);
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (played) return;
+        const entry = entries[0];
+        if (!entry.isIntersecting) return;
+        if (entry.intersectionRatio < 0.5) return;
+        played = true;
+        io.disconnect();
+        rafId = requestAnimationFrame(playFrame);
+      },
+      { threshold: [0.5, 0.75, 1] }
+    );
+    io.observe(target);
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", recalc);
+      io.disconnect();
       if (rafId) cancelAnimationFrame(rafId);
-      if (failsafeTimer) clearTimeout(failsafeTimer);
-      if (release) release();
     };
   }, []);
 
