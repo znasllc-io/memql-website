@@ -1,6 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Source_Serif_4, JetBrains_Mono } from "next/font/google";
+import { Source_Serif_4, JetBrains_Mono, Squada_One, Inter } from "next/font/google";
 import "./globals.css";
+
+// Workhorse grotesk — body + UI text (the category default). Headlines and
+// the closing quote stay serif; serif is now our one "personality face."
+const sans = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 const serif = Source_Serif_4({
   subsets: ["latin"],
@@ -13,6 +22,15 @@ const mono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
   variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+
+// Brand display face — used only for the MemQL wordmark / lockup,
+// per the brand foundation. Body + headlines stay editorial serif.
+const display = Squada_One({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--font-squada",
   display: "swap",
 });
 
@@ -76,11 +94,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07090a",
-  colorScheme: "dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#07090a" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f4ef" },
+  ],
+  colorScheme: "dark light",
   width: "device-width",
   initialScale: 1,
 };
+
+// Runs before first paint to set the theme class — no flash of wrong theme.
+// Saved choice wins; otherwise follow the OS preference (dark by default).
+const THEME_INIT = `(function(){try{var t=localStorage.getItem('memql-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}var d=document.documentElement;d.classList.remove('light','dark');d.classList.add(t);d.style.colorScheme=t;}catch(e){document.documentElement.classList.add('dark');}})();`;
 
 export default function RootLayout({
   children,
@@ -88,8 +113,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${serif.variable} ${mono.variable}`}>
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${serif.variable} ${mono.variable} ${display.variable}`}>
+      <body>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        {children}
+      </body>
     </html>
   );
 }

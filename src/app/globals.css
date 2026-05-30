@@ -1,30 +1,83 @@
 @import "tailwindcss";
 
+/* Tailwind utilities reference these via the runtime --c-* vars below, so
+   flipping a theme class on <html> re-themes the whole tree. Code/terminal
+   surfaces opt back into dark by carrying the `.dark` class themselves
+   (their --c-* get re-declared dark regardless of the page theme). */
 @theme inline {
-  --color-bg: #07090a;
-  --color-bg-elev: #0e1311;
-  --color-bg-panel: #0b1110;
-  --color-fg: #e8e6dd;
-  --color-fg-dim: #c7c2b3;
-  --color-muted: #9ca395;  /* ≈7.5:1 on bg — passes WCAG AA body */
-  --color-dim:   #6c726a;  /* ≈4.0:1 on bg — passes WCAG AA large text */
-  --color-accent: #4ade80;
-  --color-accent-bright: #22c55e;
-  --color-accent-deep: #166534;
-  --color-accent-soft: rgba(74, 222, 128, 0.08);
-  --color-border: #1a221e;
-  --color-border-strong: #243029;
-  --color-string: #cbb083;
-  --color-number: #7dd3fc;
+  --color-bg: var(--c-bg);
+  --color-bg-elev: var(--c-bg-elev);
+  --color-bg-panel: var(--c-bg-panel);
+  --color-fg: var(--c-fg);
+  --color-fg-dim: var(--c-fg-dim);
+  --color-muted: var(--c-muted);
+  --color-dim: var(--c-dim);
+  --color-accent: var(--c-accent);
+  --color-accent-bright: var(--c-accent-bright);
+  --color-accent-deep: var(--c-accent-deep);
+  --color-accent-darkest: var(--c-accent-darkest);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-brand: var(--c-brand);
+  --color-border: var(--c-border);
+  --color-border-strong: var(--c-border-strong);
+  --color-string: var(--c-string);
+  --color-number: var(--c-number);
 
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-serif: var(--font-source-serif), Georgia, serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--font-squada), "Arial Narrow", sans-serif;
+}
+
+/* ── DARK (default) — emerald brand on warm near-black ────────────────
+   #003817 darkest · #026842 deep · #009d71 mid · #499471 brand
+   · #5ccda7 light · #98ffe0 lightest. No blue. */
+:root, .dark {
+  --c-bg: #07090a;
+  --c-bg-elev: #0e1311;
+  --c-bg-panel: #0b1110;
+  --c-fg: #e8e6dd;
+  --c-fg-dim: #c7c2b3;
+  --c-muted: #9ca395;
+  --c-dim: #6c726a;
+  --c-accent: #5ccda7;          /* links, eyebrows, UI accents */
+  --c-accent-bright: #009d71;   /* DSL keywords, CTA fill */
+  --c-accent-deep: #026842;     /* borders, emphasis */
+  --c-accent-darkest: #003817;  /* soft fills, dividers */
+  --c-accent-soft: rgba(92, 205, 167, 0.08);
+  --c-brand: #499471;
+  --c-border: #18231e;
+  --c-border-strong: #213029;
+  --c-string: #cbb083;          /* syntax (code stays dark) */
+  --c-number: #98ffe0;
+}
+
+/* ── LIGHT — same emerald, warm green-tinted near-white canvas, dark
+   green-black ink. Accent shifts darker for contrast on light. */
+.light {
+  --c-bg: #f2f4ef;
+  --c-bg-elev: #ffffff;
+  --c-bg-panel: #e9ede6;
+  --c-fg: #14201a;              /* dark green-black ink (~13:1 on bg) */
+  --c-fg-dim: #3b453e;
+  --c-muted: #586159;          /* ≈5:1 on bg */
+  --c-dim: #7c847b;            /* ≈3.4:1 — large/secondary */
+  --c-accent: #047d5a;          /* readable emerald on light (~4.7:1) */
+  --c-accent-bright: #026842;   /* CTA fill (light text on it) */
+  --c-accent-deep: #5cae8e;     /* soft green border/emphasis */
+  --c-accent-darkest: #d8ebe0;  /* soft fill */
+  --c-accent-soft: rgba(2, 104, 66, 0.07);
+  --c-brand: #047d5a;
+  --c-border: #d6ddd4;
+  --c-border-strong: #c2cabf;
+  --c-string: #b45309;          /* warm amber — readable code strings on light */
+  --c-number: #0f766e;          /* teal-green — code numbers, distinct from keyword */
 }
 
 html, body {
   background: var(--color-bg);
   color: var(--color-fg);
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -33,6 +86,52 @@ html, body {
   background: var(--color-accent-deep);
   color: var(--color-fg);
 }
+.light ::selection {
+  background: #bfe6d4;
+  color: var(--color-fg);
+}
+
+/* Scroll-reveal — content rises in on a tight, engineered curve as it
+   enters the viewport. JS adds .reveal-in via IntersectionObserver. */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Tab syntax-sweep — code wipes in left-to-right like a linter pass.
+   Applied via a key change on the code panel so it re-runs per tab. */
+.code-sweep {
+  animation: code-clip 0.44s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes code-clip {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+/* Tab affordance — inactive construct tabs gently pulse/glow in a
+   staggered wave so the row reads as interactive ("click to cycle").
+   Stagger comes from an inline animation-delay per tab. */
+.tab-hint {
+  animation: tab-pulse 3.4s ease-in-out infinite;
+}
+@keyframes tab-pulse {
+  0%, 100% { opacity: 0.6; text-shadow: none; }
+  50%      { opacity: 1; text-shadow: 0 0 9px rgba(92, 205, 167, 0.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .code-sweep { animation: none; }
+  .tab-hint { animation: none; opacity: 1; }
+}
 
 /* Hero atmosphere — radial green glow, very subtle */
 .hero-glow {
@@ -40,17 +139,47 @@ html, body {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(34, 197, 94, 0.10), transparent 65%),
-    radial-gradient(ellipse 60% 40% at 100% 30%, rgba(34, 197, 94, 0.05), transparent 70%);
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0, 157, 113, 0.12), transparent 65%),
+    radial-gradient(ellipse 60% 40% at 100% 30%, rgba(92, 205, 167, 0.05), transparent 70%);
   z-index: 0;
 }
+/* On light, a softer green wash so it reads as tint, not haze. */
+.light .hero-glow {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0, 157, 113, 0.08), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 30%, rgba(2, 104, 66, 0.04), transparent 72%);
+}
 
-/* Subtle dotted/grid background option (currently unused, keep handy) */
+/* Cockpit spotlight band — a full-bleed, green-tinted background that
+   breaks the page rhythm so the flagship Cockpit reads as a second hero.
+   The radial wash sits behind the oversized console. */
+.cockpit-band {
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 34%, rgba(0, 157, 113, 0.14), transparent 70%),
+    #091512;
+}
+.light .cockpit-band {
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 34%, rgba(0, 157, 113, 0.11), transparent 72%),
+    #e3eee7;
+}
+
+/* Blueprint grid underlay — faint emerald-tinted lines (binds to brand,
+   not a neutral grey). Used as a rigor cue on structural sections. The
+   mask fades it out toward the edges so it never reads as a hard box. */
 .bg-grid {
   background-image:
-    linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
-  background-size: 32px 32px;
+    linear-gradient(to right, rgba(92, 205, 167, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(92, 205, 167, 0.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 40%, transparent 100%);
+          mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 40%, transparent 100%);
+}
+/* darker lines on light so the grid stays visible against the near-white */
+.light .bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(2, 104, 66, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(2, 104, 66, 0.06) 1px, transparent 1px);
 }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }

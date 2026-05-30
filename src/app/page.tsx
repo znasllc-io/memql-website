@@ -2,6 +2,32 @@
 
 import Image from "next/image";
 import { memo, useState, useRef, useCallback, useEffect, useMemo } from "react";
+import HeroGraph from "@/components/HeroGraph";
+import ConceptGraph from "@/components/ConceptGraph";
+import CockpitConsole from "@/components/CockpitConsole";
+import ThemeToggle from "@/components/ThemeToggle";
+import { GH_REPO, GH_STARS } from "@/lib/stars";
+
+// Live star count: baked value as initial state, re-fetched client-side on
+// mount. Failures keep the baked value. Consumers gate display on > 0.
+function useGitHubStars(): number {
+  const [stars, setStars] = useState<number>(GH_STARS);
+  useEffect(() => {
+    let alive = true;
+    fetch(`https://api.github.com/repos/${GH_REPO}`, { headers: { Accept: "application/vnd.github+json" } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (alive && j && typeof j.stargazers_count === "number") setStars(j.stargazers_count);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  return stars;
+}
+
+function formatStars(n: number): string {
+  return new Intl.NumberFormat("en-US").format(n);
+}
 
 /* ───────────────────────────── data ───────────────────────────── */
 
@@ -181,16 +207,32 @@ export default function Home() {
 /* ───────────────────────────── nav ───────────────────────────── */
 
 function Nav() {
+  const stars = useGitHubStars();
   return (
     <header className="sticky top-4 z-50 mx-auto w-full max-w-[1180px] px-4">
       <nav aria-label="Primary" className="flex items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md">
-        <a href="#top" className="flex items-center gap-2.5">
-          <Image src="/icon.png" alt="" width={26} height={26} priority className="h-[26px] w-[26px]" />
-          <span className="font-mono text-[14px] tracking-wide text-fg">
+        <a href="#top" aria-label="MemQL — home" className="flex items-center gap-2.5">
+          <Image src="/memql-mark.png" alt="" width={30} height={30} priority className="h-[30px] w-[30px] object-contain" />
+          <span className="font-display text-[21px] leading-none tracking-wide text-fg">
             MemQL<span className="text-accent">.</span>
           </span>
         </a>
-        <GithubMenu align="right" variant="nav" />
+        <div className="flex items-center gap-4">
+          {stars > 0 && (
+            <a
+              href={`https://github.com/${GH_REPO}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${formatStars(stars)} GitHub stars`}
+              className="hidden items-center gap-1.5 font-mono text-[12px] text-muted hover:text-fg transition-colors sm:inline-flex"
+            >
+              <span aria-hidden="true" className="text-accent">★</span>
+              {formatStars(stars)}
+            </a>
+          )}
+          <ThemeToggle />
+          <GithubMenu align="right" variant="nav" />
+        </div>
       </nav>
     </header>
   );
@@ -202,20 +244,29 @@ function Hero() {
   return (
     <section id="top" className="relative overflow-hidden">
       <div className="hero-glow" />
-      <div className="relative mx-auto grid max-w-[1180px] grid-cols-1 gap-12 px-8 pt-28 pb-32 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
+      <HeroGraph />
+      <div className="relative z-10 mx-auto grid max-w-[1180px] grid-cols-1 gap-12 px-8 pt-28 pb-32 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
         <div>
           <Eyebrow>// alpha · apache 2.0 · breaking changes expected</Eyebrow>
           <h1 className="mt-6 font-serif text-[44px] leading-[1.08] tracking-tight text-fg sm:text-[56px] lg:text-[60px]">
-            An AI-native memory graph with a single DSL.
+            Ship agent memory without the plumbing.
           </h1>
           <p className="mt-7 max-w-[34em] text-[18px] leading-[1.6] text-fg-dim">
-            Time-series memory. Event-driven by default. Multi-tenant by partition. A DSL where you describe behavior; an engine that handles the rest.
+            An AI-native memory graph with a single DSL &mdash; time-series, event-driven by default, multi-tenant by partition. You describe the behavior; the engine handles the rest.
           </p>
-          <div className="mt-9 flex flex-wrap items-center gap-6">
-            <GithubMenu label="view on github" variant="cta" align="left" />
-            <span className="font-mono text-[12px] tracking-wider text-dim uppercase">
-              no demo · no waitlist · apache 2.0
-            </span>
+          <div className="mt-9 flex flex-wrap items-center gap-4">
+            <a
+              href="https://github.com/znasllc-io/MemQL"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-accent-bright px-5 py-2.5 font-mono text-[13px] tracking-wide text-bg transition-colors hover:bg-accent"
+            >
+              <span aria-hidden="true">★</span> Star on GitHub
+            </a>
+            <GithubMenu label="browse source" variant="cta" align="left" />
+          </div>
+          <div className="mt-5 font-mono text-[12px] tracking-wider text-dim uppercase">
+            no demo · no waitlist · apache 2.0
           </div>
         </div>
         <CodeWindow filename="dsl/cognition/automations.memql">
@@ -231,9 +282,32 @@ function Hero() {
 function StackStrip() {
   const builtOn = ["PostgreSQL", "TimescaleDB", "Go", "Anthropic", "OpenAI", "Gemini", "Mistral", "Groq", "Deepgram"];
   const inTheBox = ["dsl", "voice", "computer use", "cockpit", "mcp", "cluster"];
+  const stars = useGitHubStars();
+  const creds = ["Apache 2.0", "Alpha", "self-hostable", "MCP-native"];
   return (
     <section className="border-y border-border bg-bg-panel">
       <div className="mx-auto max-w-[1180px] px-8">
+        {/* proof row — honest, verifiable credentials in the first scroll */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-border py-4">
+          {creds.map((c) => (
+            <span key={c} className="inline-flex items-center gap-1.5 font-mono text-[12px] tracking-wide text-fg-dim">
+              <span aria-hidden="true" className="text-accent">›</span> {c}
+            </span>
+          ))}
+          {stars > 0 && (
+            <a
+              href={`https://github.com/${GH_REPO}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-mono text-[12px] tracking-wide text-fg-dim hover:text-fg transition-colors"
+            >
+              <span aria-hidden="true" className="text-accent">★</span> {formatStars(stars)} on GitHub
+            </a>
+          )}
+          <span className="ml-auto font-mono text-[12px] tracking-wide text-dim">
+            built with Claude as co-author
+          </span>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border py-5">
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-dim">
             built on
@@ -266,32 +340,83 @@ function StackStrip() {
 /* ───────────────────────── what / how ───────────────────────── */
 
 function What() {
+  // phase 1 permanent · 2 organized · 3 retrievable — driven by the graph
+  const [phase, setPhase] = useState(0);
+  const onPhase = useCallback((p: number) => setPhase(p), []);
+
+  const cols: { key: string; label: string; body: React.ReactNode }[] = [
+    {
+      key: "permanent",
+      label: "// permanent",
+      body: (
+        <>
+          Append-only by default. Every row is keyed by <Inline>(partition, id, createdAt)</Inline> on TimescaleDB hypertables &mdash; history is a first-class index, not a log file. Data is archived via soft-delete, not destroyed.
+        </>
+      ),
+    },
+    {
+      key: "organized",
+      label: "// organized",
+      body: (
+        <>
+          Every node has its place. Behavior is declared, not coded &mdash; concept, query, mutation, automation, and more. Multi-tenant by partition: each customer is an isolated world; cluster-wide concepts live in <Inline>_system</Inline>.
+        </>
+      ),
+    },
+    {
+      key: "retrievable",
+      label: "// retrievable",
+      body: (
+        <>
+          Any node, minimum path. Each datum has an index, a context, and a query. And memory acts: every mutation emits a typed event, automations subscribe via <Inline>@trigger</Inline> &mdash; context reaches the agent the moment it&rsquo;s needed.
+        </>
+      ),
+    },
+  ];
+
   return (
-    <Section eyebrow="what">
+    <Section eyebrow="what" index="01">
       <Headline>What MemQL actually is.</Headline>
       <Lede className="max-w-[44em]">
         Agent and voice deployments are integration-heavy. The engineering is mostly plumbing &mdash; vector store, orchestrator, tool registry, model provider, kept consistent by hand. MemQL collapses that plumbing into one declarative substrate on top of PostgreSQL and TimescaleDB.
       </Lede>
-      <div className="mt-14 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
-        <div>
-          <Label tone="accent" as="h3">// time-series</Label>
-          <p className="text-[16px] leading-[1.65] text-fg">
-            Because agents have memory. TimescaleDB hypertables underneath. Every row keyed by <Inline>(partition, id, createdAt)</Inline> &mdash; history is a first-class index, not a log file.
-          </p>
-        </div>
-        <div>
-          <Label tone="accent" as="h3">// event-driven</Label>
-          <p className="text-[16px] leading-[1.65] text-fg">
-            Because agents react. Every mutation emits <Inline>node.created</Inline> or <Inline>node.updated</Inline>. Automations subscribe via <Inline>@trigger</Inline>. No polling, no glue, no message bus to operate.
-          </p>
-        </div>
-        <div>
-          <Label tone="accent" as="h3">// multi-tenant</Label>
-          <p className="text-[16px] leading-[1.65] text-fg">
-            Because each customer is their own world. Partition-isolated storage at the row level. Cluster-wide concepts (identity, topology) live in <Inline>_system</Inline>.
-          </p>
-        </div>
+      <p className="mt-7 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
+        A network of nodes built for three properties at once &mdash; the same three a crystal lattice gets for free. Watch.
+      </p>
+
+      <Reveal delay={120} className="mt-10 overflow-hidden rounded-lg border border-border bg-bg-elev/40">
+        <ConceptGraph onPhase={onPhase} />
+      </Reveal>
+
+      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
+        {cols.map((c, i) => {
+          const lit = phase >= i + 1;
+          return (
+            <div
+              key={c.key}
+              className={`border-l-2 pl-5 transition-all duration-500 ${
+                lit ? "border-accent" : "border-border"
+              }`}
+            >
+              <h3
+                className={`mb-3 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors duration-500 ${
+                  lit ? "text-accent" : "text-dim"
+                }`}
+              >
+                {c.label}
+              </h3>
+              <p
+                className={`text-[16px] leading-[1.65] transition-colors duration-500 ${
+                  lit ? "text-fg" : "text-muted"
+                }`}
+              >
+                {c.body}
+              </p>
+            </div>
+          );
+        })}
       </div>
+
       <p className="mt-14 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
         <span className="text-accent">// mcp</span> &middot; Author tools in MemQL once. They speak MCP &mdash; every tool is reachable by any MCP client.
       </p>
@@ -308,12 +433,12 @@ function How() {
     ["planner",   "orchestration",      "Multi-step task graphs across agents."],
   ];
   return (
-    <Section eyebrow="architecture">
+    <Section eyebrow="architecture" index="02" grid>
       <Headline>Three layers. One source tree.</Headline>
       <Lede className="max-w-[44em]">
         Plain-text DSL on top, a single Go source tree in the middle, partition-isolated time-series storage underneath. Build tags decide which binary each node becomes.
       </Lede>
-      <div className="mt-14 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16">
+      <Reveal delay={120} className="mt-14 grid grid-cols-1 gap-12 rounded-lg border border-border bg-bg-elev px-7 py-9 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16 lg:px-10 lg:py-11">
         <div>
           <Label as="h3">// layers</Label>
           <pre className="mt-1 overflow-x-auto whitespace-pre font-mono text-[13px] leading-[1.85] text-muted">
@@ -342,7 +467,7 @@ function How() {
             // one binary per type. same source tree. build tags decide what&rsquo;s compiled in.
           </p>
         </div>
-      </div>
+      </Reveal>
     </Section>
   );
 }
@@ -351,14 +476,14 @@ function How() {
 
 function Compare() {
   return (
-    <Section eyebrow="the pitch" id="compare">
+    <Section eyebrow="the pitch" id="compare" index="03">
       <Headline>
         From a duct-taped stack to nine lines of MemQL.
       </Headline>
       <Lede className="max-w-[34em]">
         Postgres next to a vector DB next to a custom event bus next to an OpenAI wrapper next to a retry-logic file. You&rsquo;ve built it. Drag the divider.
       </Lede>
-      <div className="mt-12">
+      <Reveal delay={120} className="mt-12">
         <ComparisonSlider />
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6">
           <Caption>
@@ -368,7 +493,7 @@ function Compare() {
             <span className="text-accent">memql &mdash;</span> 9 lines, declarative. Trigger, filter, partition, dispatch. The engine handles the rest.
           </Caption>
         </div>
-      </div>
+      </Reveal>
     </Section>
   );
 }
@@ -474,7 +599,7 @@ function ComparisonSlider() {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-bg-elev">
       {/* chrome */}
-      <div className="flex items-center gap-2 border-b border-border bg-black/30 px-4 py-3">
+      <div className="flex items-center gap-2 border-b border-border bg-bg-panel px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
@@ -535,7 +660,7 @@ function ComparisonSlider() {
           style={{ left: `calc(${pct}% - 14px)`, width: 28 }}
         >
           <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-accent/60 group-hover:bg-accent transition-colors" />
-          <div className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full border border-accent-deep bg-bg-elev shadow-[0_0_0_6px_rgba(74,222,128,0.10)] group-hover:shadow-[0_0_0_8px_rgba(74,222,128,0.15)] transition-shadow">
+          <div className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full border border-accent-deep bg-bg-elev shadow-[0_0_0_6px_rgba(92,205,167,0.10)] group-hover:shadow-[0_0_0_8px_rgba(92,205,167,0.16)] transition-shadow">
             <span aria-hidden="true" className="font-mono text-[14px] leading-none text-accent">⇆</span>
           </div>
         </div>
@@ -565,13 +690,13 @@ function Language() {
   };
 
   return (
-    <Section eyebrow="the language">
+    <Section eyebrow="the language" index="04" grid>
       <Headline>Eight constructs. One file format.</Headline>
       <Lede className="max-w-[36em]">
         Every behavior in the system is described as a typed construct in a <Inline>.memql</Inline> file. The vocabulary is small. The system is what those eight nouns compose into.
       </Lede>
 
-      <div className="mt-12 overflow-hidden rounded-lg border border-border bg-bg-elev">
+      <Reveal delay={120} className="mt-12 overflow-hidden rounded-lg border border-border bg-bg-elev">
         {/* tabs */}
         <div
           role="tablist"
@@ -591,10 +716,11 @@ function Language() {
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => setActive(c.name)}
                 onKeyDown={(e) => onTabKeyDown(e, i)}
-                className={`-mb-px border-b-2 px-3 py-3.5 font-mono text-[12.5px] tracking-wide outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
+                style={!isActive ? { animationDelay: `${i * 0.18}s` } : undefined}
+                className={`-mb-px cursor-pointer border-b-2 px-3 py-3.5 font-mono text-[12.5px] tracking-wide outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
                   isActive
                     ? "border-accent bg-accent-soft text-accent"
-                    : "border-transparent text-muted hover:bg-bg/40 hover:text-fg"
+                    : "tab-hint border-transparent text-muted hover:bg-bg/40 hover:text-fg hover:[animation:none]"
                 }`}
               >
                 {c.name}
@@ -604,7 +730,7 @@ function Language() {
         </div>
 
         {/* file path + blurb */}
-        <div className="flex flex-col gap-1 border-b border-border bg-black/20 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1 border-b border-border bg-bg-panel px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="font-mono text-[11.5px] text-muted">
             {item.file}
           </span>
@@ -613,18 +739,18 @@ function Language() {
           </span>
         </div>
 
-        {/* code panel */}
+        {/* code panel — keyed on active so the syntax-sweep replays per tab */}
         <div
           role="tabpanel"
           id={`tabpanel-${item.name}`}
           aria-labelledby={`tab-${item.name}`}
           tabIndex={0}
         >
-          <pre className="min-h-[440px] overflow-x-auto px-6 py-6 font-mono text-[12.5px] leading-[1.75]">
+          <pre key={item.name} className="code-sweep min-h-[440px] overflow-x-auto px-6 py-6 font-mono text-[12.5px] leading-[1.75]">
             <CodeBlock code={item.code} lang="memql" />
           </pre>
         </div>
-      </div>
+      </Reveal>
     </Section>
   );
 }
@@ -643,42 +769,44 @@ function Cockpit() {
     ["settings", "keys · telemetry · prefs"],
   ];
   return (
-    <Section eyebrow="cockpit">
-      <Headline>A TUI that ships with the platform.</Headline>
-      <Lede className="max-w-[44em]">
-        Terminal-native IDE and operations console for MemQL clusters. Write, lint, and execute DSL; explore cluster state; manage identity and workers; observe the platform in real time. No web app. No Electron. Just gRPC to the cluster.
-      </Lede>
+    <section
+      id="cockpit"
+      aria-labelledby="cockpit-eyebrow"
+      className="cockpit-band relative overflow-hidden border-y border-border"
+    >
+      {/* wider than the page column — the console breaks out, Warp/Raycast-style */}
+      <div className="relative mx-auto max-w-[1360px] px-8 py-32">
+        {/* centered product lockup crowning the flagship band:
+            MemQL · [mark] · Cockpit, with the node mark as the centerpiece glyph. */}
+        <div className="mb-16 flex items-center justify-center gap-3 sm:gap-4">
+          <span className="font-display text-[40px] leading-none tracking-wide text-fg sm:text-[48px]">
+            MemQL
+          </span>
+          <Image src="/memql-mark.png" alt="" width={60} height={60} priority className="h-[60px] w-[60px] object-contain" />
+          <span className="font-display text-[40px] leading-none tracking-wide text-fg sm:text-[48px]">
+            Cockpit<span className="text-accent">.</span>
+          </span>
+        </div>
+        <Eyebrow id="cockpit-eyebrow" index="05">cockpit</Eyebrow>
+        <Headline>A TUI that ships with the platform.</Headline>
+        <Lede className="max-w-[46em]">
+          A second product, in your terminal. Terminal-native IDE and operations console for MemQL clusters &mdash; write, lint, and execute DSL; explore cluster state; manage identity and workers; observe the platform in real time. No web app. No Electron. Just gRPC to the cluster.
+        </Lede>
 
-      {/* TUI mock — box-drawing chars, sidebar layout, keybind bar.
-          Wrapped in <figure role="img"> so screen readers announce it
-          as a single image with a meaningful caption rather than spelling
-          out every box-drawing glyph individually. */}
-      <figure
-        role="img"
-        aria-label="MemQL Cockpit TUI mockup: eight-tab terminal interface with the 'agents' tab active, showing four connected participants — sofia, claude-sonnet-4.6, planner-01, mac-mini-pool — and a keybind bar at the bottom."
-        className="mt-12 overflow-x-auto rounded-md bg-bg-elev px-3 py-5"
-      >
-        <pre aria-hidden="true" className="mx-auto inline-block font-mono text-[13px] leading-[1.55] text-muted">
-{`┌──────────────────────────────────────────────────────────────────────────┐
-│ `}<span className="text-fg">memql-cockpit</span>{`                                 `}<span className="text-accent">connected</span>{` · 4 agents      │
-├──────────────┬───────────────────────────────────────────────────────────┤
-│ `}<span className="text-accent">▸ agents</span>{`     │  ── agents ──────────────────────────────                 │
-│   auth       │                                                           │
-│   client     │  `}<span className="text-accent">●</span>{` `}<span className="text-fg-dim">sofia</span>{`               human   asst-of   #space-72        │
-│   cluster    │  `}<span className="text-accent">●</span>{` `}<span className="text-fg-dim">claude-sonnet-4.6</span>{`   si      general   #space-72        │
-│   config     │  `}<span className="text-dim">○</span>{` `}<span className="text-fg-dim">planner-01</span>{`          worker  idle      —                 │
-│   editor     │  `}<span className="text-dim">○</span>{` `}<span className="text-fg-dim">mac-mini-pool</span>{`       worker  idle      —                 │
-│   explorer   │                                                           │
-│   settings   │  `}<span className="text-dim italic">// 4 connected · 12 events/min · gRPC ok</span>{`                 │
-│              │                                                           │
-├──────────────┴───────────────────────────────────────────────────────────┤
-│  `}<span className="text-accent">q</span>{`:quit  `}<span className="text-accent">↑↓</span>{`:nav  `}<span className="text-accent">Tab</span>{`:next-pane  `}<span className="text-accent">e</span>{`:edit  `}<span className="text-accent">/</span>{`:search  `}<span className="text-accent">?</span>{`:help                 │
-└──────────────────────────────────────────────────────────────────────────┘`}
-        </pre>
-      </figure>
+        {/* oversized live console, lifted off the band with an emerald glow */}
+        <Reveal delay={120} className="relative isolate mt-14">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-x-6 -inset-y-10 z-0"
+            style={{ background: "radial-gradient(ellipse 58% 72% at 50% 50%, rgba(0,157,113,0.20), transparent 72%)" }}
+          />
+          <div className="relative z-10">
+            <CockpitConsole />
+          </div>
+        </Reveal>
 
       {/* eight tabs */}
-      <div className="mt-14">
+      <Reveal delay={80} className="mt-14">
         <Label as="h3">// eight tabs</Label>
         <div className="mt-3 grid grid-cols-1 gap-x-12 gap-y-3.5 sm:grid-cols-2">
           {tabs.map(([tab, desc]) => (
@@ -688,10 +816,10 @@ function Cockpit() {
             </div>
           ))}
         </div>
-      </div>
+      </Reveal>
 
       {/* computer use + install */}
-      <div className="mt-14 grid grid-cols-1 gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+      <Reveal delay={80} className="mt-14 grid grid-cols-1 gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
         <div>
           <Label tone="accent" as="h3">// computer use</Label>
           <p className="text-[16px] leading-[1.65] text-fg">
@@ -708,7 +836,7 @@ $ `}<span className="text-accent">./bin/memql-cockpit</span>
             macOS LaunchAgent &middot; Linux systemd user service &middot; cross-compile via <Inline>make cockpit-all-platforms</Inline>
           </p>
         </div>
-      </div>
+      </Reveal>
 
       {/* repo link */}
       <div className="mt-12">
@@ -721,7 +849,8 @@ $ `}<span className="text-accent">./bin/memql-cockpit</span>
           znasllc-io/memql-cockpit <span>→</span>
         </a>
       </div>
-    </Section>
+      </div>
+    </section>
   );
 }
 
@@ -743,14 +872,14 @@ function ForWhom() {
     },
   ];
   return (
-    <Section eyebrow="who it's for">
+    <Section eyebrow="who it's for" index="06">
       <Headline>Three readers.</Headline>
       <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-3">
-        {items.map((it) => (
-          <div key={it.label}>
+        {items.map((it, i) => (
+          <Reveal key={it.label} delay={i * 90}>
             <Label tone="accent" as="h3">{it.label}</Label>
             <p className="text-[16px] leading-[1.65] text-fg">{it.body}</p>
-          </div>
+          </Reveal>
         ))}
       </div>
     </Section>
@@ -764,9 +893,12 @@ function Close() {
     <section id="project" className="relative overflow-hidden border-t border-border">
       <div className="hero-glow" />
       <div className="relative mx-auto max-w-[760px] px-8 py-32 text-center">
-        <Eyebrow center>// the project</Eyebrow>
+        <Eyebrow center index="07">the project</Eyebrow>
         <p className="mx-auto mt-8 max-w-[32em] font-serif text-[24px] leading-[1.45] text-fg sm:text-[28px]">
           MemQL and MemQL Cockpit are open source, Apache 2.0. Designed and built with Claude as co-author. Alpha &mdash; breaking changes expected.
+        </p>
+        <p className="mx-auto mt-9 max-w-[34em] font-mono text-[12.5px] leading-[1.65] text-muted">
+          Memory Query Language &mdash; built to be to AI memory what SQL is to relational data.
         </p>
         <div className="mt-12 inline-block">
           <GithubMenu label="view on github" variant="cta" align="center" />
@@ -783,8 +915,8 @@ function Footer() {
     <footer className="border-t border-border">
       <div className="mx-auto flex max-w-[1180px] flex-col items-start justify-between gap-4 px-8 py-10 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2.5">
-          <Image src="/icon.png" alt="" width={20} height={20} className="h-5 w-5 opacity-80" />
-          <span className="font-mono text-[12px] tracking-wide text-muted">
+          <Image src="/memql-mark.png" alt="" width={24} height={24} className="h-6 w-6 object-contain opacity-90" />
+          <span className="font-display text-[16px] tracking-wide text-muted">
             MemQL<span className="text-accent">.</span>
           </span>
         </div>
@@ -801,17 +933,22 @@ function Footer() {
 function Section({
   eyebrow,
   id,
+  index,
+  grid = false,
   children,
 }: {
   eyebrow: string;
   id?: string;
+  index?: string;
+  grid?: boolean;
   children: React.ReactNode;
 }) {
   const labelId = `section-eyebrow-${id ?? eyebrow.replace(/[^a-z0-9]/gi, "-")}`;
   return (
-    <section id={id} aria-labelledby={labelId} className="border-t border-border">
-      <div className="mx-auto max-w-[1180px] px-8 py-28">
-        <Eyebrow id={labelId}>{eyebrow}</Eyebrow>
+    <section id={id} aria-labelledby={labelId} className="relative border-t border-border">
+      {grid && <div aria-hidden="true" className="bg-grid pointer-events-none absolute inset-0" />}
+      <div className="relative mx-auto max-w-[1180px] px-8 py-28">
+        <Eyebrow id={labelId} index={index}>{eyebrow}</Eyebrow>
         <div className="mt-6">{children}</div>
       </div>
     </section>
@@ -956,25 +1093,74 @@ function GithubMenu({
   );
 }
 
-function Eyebrow({ children, center = false, id }: { children: React.ReactNode; center?: boolean; id?: string }) {
+function Eyebrow({ children, center = false, id, index }: { children: React.ReactNode; center?: boolean; id?: string; index?: string }) {
   return (
     <div id={id} className={`font-mono text-[11px] uppercase tracking-[0.22em] text-accent ${center ? "text-center" : ""}`}>
+      {index && <span className="text-dim">{index} / 07&nbsp;&nbsp;</span>}
       {children}
     </div>
   );
 }
 
+function Reveal({
+  children,
+  delay = 0,
+  className = "",
+  as: Tag = "div",
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+  as?: "div" | "h2" | "p";
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setShown(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -8% 0px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <Tag
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ref={ref as any}
+      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      className={`reveal ${shown ? "reveal-in" : ""} ${className}`}
+    >
+      {children}
+    </Tag>
+  );
+}
+
 function Headline({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mt-5 max-w-[18em] font-serif text-[36px] leading-[1.12] tracking-tight text-fg sm:text-[44px]">
+    <Reveal as="h2" className="mt-5 max-w-[18em] font-serif text-[36px] leading-[1.12] tracking-tight text-fg sm:text-[44px]">
       {children}
-    </h2>
+    </Reveal>
   );
 }
 
 function Lede({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={`mt-7 text-[18px] leading-[1.6] text-fg-dim ${className}`}>{children}</p>
+    <Reveal as="p" delay={70} className={`mt-7 text-[18px] leading-[1.6] text-fg-dim ${className}`}>
+      {children}
+    </Reveal>
   );
 }
 
@@ -1016,7 +1202,7 @@ function CodeWindow({
 }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-bg-elev">
-      <div className="flex items-center gap-2 border-b border-border bg-black/30 px-4 py-3">
+      <div className="flex items-center gap-2 border-b border-border bg-bg-panel px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
