@@ -34,7 +34,7 @@ export default function ThemeToggle() {
       onClick={toggle}
       aria-label={label}
       title={label}
-      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[14px] leading-none text-muted outline-none transition-colors hover:text-fg focus-visible:ring-2 focus-visible:ring-accent"
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-bg/70 text-[19px] leading-none text-fg-dim outline-none backdrop-blur-md transition-colors hover:border-accent-deep hover:text-accent focus-visible:ring-2 focus-visible:ring-accent"
     >
       <span aria-hidden="true">{theme === null ? "" : glyph}</span>
     </button>

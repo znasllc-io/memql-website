@@ -9,3 +9,7 @@ dist
 next-env.d.ts
 .claude/
 tsconfig.tsbuildinfo
+
+# local-only handoff notes for Claude instances — never commit
+HANDOFF.local.md
+*.local.md

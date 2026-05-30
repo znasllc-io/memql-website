@@ -6,6 +6,8 @@ import HeroGraph from "@/components/HeroGraph";
 import ConceptGraph from "@/components/ConceptGraph";
 import CockpitConsole from "@/components/CockpitConsole";
 import ThemeToggle from "@/components/ThemeToggle";
+import WindowControls from "@/components/WindowControls";
+import { useOS } from "@/lib/useOS";
 import { GH_REPO, GH_STARS } from "@/lib/stars";
 
 // Live star count: baked value as initial state, re-fetched client-side on
@@ -209,8 +211,8 @@ export default function Home() {
 function Nav() {
   const stars = useGitHubStars();
   return (
-    <header className="sticky top-4 z-50 mx-auto w-full max-w-[1180px] px-4">
-      <nav aria-label="Primary" className="flex items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md">
+    <header className="fixed inset-x-0 top-4 z-50 mx-auto flex w-full max-w-[1180px] items-center gap-3 px-4">
+      <nav aria-label="Primary" className="flex flex-1 items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md">
         <a href="#top" aria-label="MemQL — home" className="flex items-center gap-2.5">
           <Image src="/memql-mark.png" alt="" width={30} height={30} priority className="h-[30px] w-[30px] object-contain" />
           <span className="font-display text-[21px] leading-none tracking-wide text-fg">
@@ -230,10 +232,11 @@ function Nav() {
               {formatStars(stars)}
             </a>
           )}
-          <ThemeToggle />
           <GithubMenu align="right" variant="nav" />
         </div>
       </nav>
+      {/* theme toggle sits OUTSIDE the nav oval as its own control */}
+      <ThemeToggle />
     </header>
   );
 }
@@ -245,9 +248,9 @@ function Hero() {
     <section id="top" className="relative overflow-hidden">
       <div className="hero-glow" />
       <HeroGraph />
-      <div className="relative z-10 mx-auto grid max-w-[1180px] grid-cols-1 gap-12 px-8 pt-28 pb-32 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
+      <div className="relative z-10 mx-auto grid max-w-[1180px] grid-cols-1 gap-12 px-8 pt-36 pb-32 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
         <div>
-          <Eyebrow>// alpha · apache 2.0 · breaking changes expected</Eyebrow>
+          <Eyebrow>// alpha · apache 2.0</Eyebrow>
           <h1 className="mt-6 font-serif text-[44px] leading-[1.08] tracking-tight text-fg sm:text-[56px] lg:text-[60px]">
             Ship agent memory without the plumbing.
           </h1>
@@ -595,18 +598,18 @@ function ComparisonSlider() {
   }, []);
 
   const dominantFile = pct > 50 ? "on_space_created.py" : "dsl/cognition/automations.memql";
+  const os = useOS();
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-bg-elev">
       {/* chrome */}
       <div className="flex items-center gap-2 border-b border-border bg-bg-panel px-4 py-3">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-        <span className="ml-3 font-mono text-[11.5px] text-muted">{dominantFile}</span>
+        {os === "mac" && <WindowControls os={os} />}
+        <span className={`${os === "mac" ? "ml-3" : ""} font-mono text-[11.5px] text-muted`}>{dominantFile}</span>
         <span className="ml-auto font-mono text-[11px] uppercase tracking-[0.18em] text-dim">
           drag ⇆
         </span>
+        {os !== "mac" && <WindowControls os={os} color="var(--color-muted)" />}
       </div>
 
       {/* body: two static layers anchored to opposite edges + vertical slider cut */}
@@ -895,7 +898,7 @@ function Close() {
       <div className="relative mx-auto max-w-[760px] px-8 py-32 text-center">
         <Eyebrow center index="07">the project</Eyebrow>
         <p className="mx-auto mt-8 max-w-[32em] font-serif text-[24px] leading-[1.45] text-fg sm:text-[28px]">
-          MemQL and MemQL Cockpit are open source, Apache 2.0. Designed and built with Claude as co-author. Alpha &mdash; breaking changes expected.
+          MemQL and MemQL Cockpit are open source, Apache 2.0. Designed and built with Claude as co-author. Alpha.
         </p>
         <p className="mx-auto mt-9 max-w-[34em] font-mono text-[12.5px] leading-[1.65] text-muted">
           Memory Query Language &mdash; built to be to AI memory what SQL is to relational data.
@@ -1200,15 +1203,19 @@ function CodeWindow({
   filenameTone?: "muted" | "dim";
   children: React.ReactNode;
 }) {
+  const os = useOS();
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-bg-elev">
       <div className="flex items-center gap-2 border-b border-border bg-bg-panel px-4 py-3">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-        <span className={`ml-3 font-mono text-[11.5px] ${filenameTone === "dim" ? "text-dim" : "text-muted"}`}>
+        {os === "mac" && <WindowControls os={os} />}
+        <span className={`${os === "mac" ? "ml-3" : ""} font-mono text-[11.5px] ${filenameTone === "dim" ? "text-dim" : "text-muted"}`}>
           {filename}
         </span>
+        {os !== "mac" && (
+          <span className="ml-auto">
+            <WindowControls os={os} color="var(--color-muted)" />
+          </span>
+        )}
       </div>
       <pre className="overflow-x-auto px-5 py-5 font-mono text-[12.5px] leading-[1.75]">
         {children}

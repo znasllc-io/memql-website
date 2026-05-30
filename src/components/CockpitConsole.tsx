@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useOS } from "@/lib/useOS";
+import WindowControls from "@/components/WindowControls";
 
 /* ─────────────────────────────────────────────────────────────────────
    CockpitConsole — a faithful reproduction of memQL Cockpit, shown in a
@@ -56,6 +58,7 @@ export default function CockpitConsole() {
   }, []);
 
   const cursor = <span style={{ color: CP.accent, opacity: blink ? 1 : 0 }}>▊</span>;
+  const os = useOS();
 
   return (
     <div ref={rootRef}>
@@ -65,12 +68,11 @@ export default function CockpitConsole() {
         className="overflow-hidden rounded-lg border text-[12.5px] leading-[1.6] shadow-[0_18px_50px_-20px_rgba(0,0,0,0.45)]"
         style={{ background: CP.bg, borderColor: "#2a2a32", fontFamily: "var(--font-mono)" }}
       >
-        {/* terminal chrome */}
+        {/* terminal chrome — controls match the visitor's OS */}
         <div className="flex items-center gap-2 border-b px-4 py-2.5" style={{ background: CP.bar, borderColor: "#2a2a32" }}>
-          <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-          <span className="ml-3" style={{ color: CP.subtle }}>memql-cockpit — localhost:50050</span>
+          {os === "mac" && <WindowControls os={os} />}
+          <span className={os === "mac" ? "ml-3" : ""} style={{ color: CP.subtle }}>memql-cockpit — localhost:50050</span>
+          {os !== "mac" && <span className="ml-auto"><WindowControls os={os} color={CP.subtle} /></span>}
         </div>
 
         {/* header status line (connected) */}
