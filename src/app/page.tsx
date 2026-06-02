@@ -194,6 +194,7 @@ export default function Home() {
         <Hero />
         <StackStrip />
         <What />
+        <AgentLoop />
         <How />
         <Compare />
         <Language />
@@ -284,7 +285,7 @@ function Hero() {
 
 function StackStrip() {
   const builtOn = ["PostgreSQL", "TimescaleDB", "Go", "Anthropic", "OpenAI", "Gemini", "Mistral", "Groq", "Deepgram"];
-  const inTheBox = ["dsl", "voice", "computer use", "cockpit", "mcp", "cluster"];
+  const inTheBox = ["dsl", "memory", "library", "harness", "voice", "computer use", "cockpit", "mcp", "cluster"];
   const stars = useGitHubStars();
   const creds = ["Apache 2.0", "Alpha", "self-hostable", "MCP-native"];
   return (
@@ -302,14 +303,11 @@ function StackStrip() {
               href={`https://github.com/${GH_REPO}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-mono text-[12px] tracking-wide text-fg-dim hover:text-fg transition-colors"
+              className="ml-auto inline-flex items-center gap-1.5 font-mono text-[12px] tracking-wide text-fg-dim hover:text-fg transition-colors"
             >
               <span aria-hidden="true" className="text-accent">★</span> {formatStars(stars)} on GitHub
             </a>
           )}
-          <span className="ml-auto font-mono text-[12px] tracking-wide text-dim">
-            built with Claude as co-author
-          </span>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border py-5">
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-dim">
@@ -427,6 +425,55 @@ function What() {
   );
 }
 
+function AgentLoop() {
+  const cols: { label: string; body: React.ReactNode }[] = [
+    {
+      label: "// memory",
+      body: (
+        <>
+          Consolidation turns episodic memory &mdash; what happened &mdash; into semantic knowledge: what&rsquo;s true in general. <Inline>recall()</Inline> blends recency &times; relevance; semantic retrieval finds by meaning. Episodic, semantic, similarity &mdash; one memory, mechanical not metaphor.
+        </>
+      ),
+    },
+    {
+      label: "// the harness",
+      body: (
+        <>
+          Agents work through whole tasks, not just react. A structured loop &mdash; <Inline>plan</Inline>, <Inline>step</Inline>, <Inline>observation</Inline> &mdash; with budgets, retries, and stopping rules. The planner runs reactively (tick &rarr; route &rarr; converge), and an agent can pause to ask you via <Inline>requestUserFeedback</Inline>.
+        </>
+      ),
+    },
+    {
+      label: "// inspectable",
+      body: (
+        <>
+          <Inline>trace</Inline> &middot; <Inline>replay</Inline> &middot; <Inline>eval</Inline>. Record a run, replay it, grade it. The agent loop is glass, not a black box &mdash; the part senior engineers ask about first.
+        </>
+      ),
+    },
+  ];
+  return (
+    <Section eyebrow="the agent loop" index="02">
+      <Headline>Where agents plan, remember, and are held to account.</Headline>
+      <Lede className="max-w-[44em]">
+        Storing data and reacting to events is table stakes. MemQL is where agents run whole tasks against a memory that behaves like memory &mdash; and where you can watch exactly what they did.
+      </Lede>
+      <div className="mt-14 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
+        {cols.map((c) => (
+          <Reveal key={c.label} delay={80}>
+            <Label tone="accent" as="h3">{c.label}</Label>
+            <p className="text-[16px] leading-[1.65] text-fg">{c.body}</p>
+          </Reveal>
+        ))}
+      </div>
+
+      <p className="mt-14 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
+        <span className="text-accent">// tools</span> &middot; calendar &middot; notes &middot; tasks &middot; responsibilities &mdash; each a concept, a tool, and a skill. The Library subsystem stores and faceted-queries everything they produce.
+      </p>
+    </Section>
+  );
+}
+
 function How() {
   const nodes: [string, string, string][] = [
     ["bff",       "frontend backend",   "HTTP surface for the apps."],
@@ -436,7 +483,7 @@ function How() {
     ["planner",   "orchestration",      "Multi-step task graphs across agents."],
   ];
   return (
-    <Section eyebrow="architecture" index="02" grid>
+    <Section eyebrow="architecture" index="03" grid>
       <Headline>Three layers. One source tree.</Headline>
       <Lede className="max-w-[44em]">
         Plain-text DSL on top, a single Go source tree in the middle, partition-isolated time-series storage underneath. Build tags decide which binary each node becomes.
@@ -479,7 +526,7 @@ function How() {
 
 function Compare() {
   return (
-    <Section eyebrow="the pitch" id="compare" index="03">
+    <Section eyebrow="the pitch" id="compare" index="04">
       <Headline>
         From a duct-taped stack to nine lines of MemQL.
       </Headline>
@@ -693,7 +740,7 @@ function Language() {
   };
 
   return (
-    <Section eyebrow="the language" index="04" grid>
+    <Section eyebrow="the language" index="05" grid>
       <Headline>Eight constructs. One file format.</Headline>
       <Lede className="max-w-[36em]">
         Every behavior in the system is described as a typed construct in a <Inline>.memql</Inline> file. The vocabulary is small. The system is what those eight nouns compose into.
@@ -790,7 +837,7 @@ function Cockpit() {
             Cockpit<span className="text-accent">.</span>
           </span>
         </div>
-        <Eyebrow id="cockpit-eyebrow" index="05">cockpit</Eyebrow>
+        <Eyebrow id="cockpit-eyebrow" index="06">cockpit</Eyebrow>
         <Headline>A TUI that ships with the platform.</Headline>
         <Lede className="max-w-[46em]">
           A second product, in your terminal. Terminal-native IDE and operations console for MemQL clusters &mdash; write, lint, and execute DSL; explore cluster state; manage identity and workers; observe the platform in real time. No web app. No Electron. Just gRPC to the cluster.
@@ -875,7 +922,7 @@ function ForWhom() {
     },
   ];
   return (
-    <Section eyebrow="who it's for" index="06">
+    <Section eyebrow="who it's for" index="07">
       <Headline>Three readers.</Headline>
       <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-3">
         {items.map((it, i) => (
@@ -896,7 +943,7 @@ function Close() {
     <section id="project" className="relative overflow-hidden border-t border-border">
       <div className="hero-glow" />
       <div className="relative mx-auto max-w-[760px] px-8 py-32 text-center">
-        <Eyebrow center index="07">the project</Eyebrow>
+        <Eyebrow center index="08">the project</Eyebrow>
         <p className="mx-auto mt-8 max-w-[32em] font-serif text-[24px] leading-[1.45] text-fg sm:text-[28px]">
           MemQL and MemQL Cockpit are open source, Apache 2.0. Designed and built with Claude as co-author. Alpha.
         </p>
@@ -1099,7 +1146,7 @@ function GithubMenu({
 function Eyebrow({ children, center = false, id, index }: { children: React.ReactNode; center?: boolean; id?: string; index?: string }) {
   return (
     <div id={id} className={`font-mono text-[11px] uppercase tracking-[0.22em] text-accent ${center ? "text-center" : ""}`}>
-      {index && <span className="text-dim">{index} / 07&nbsp;&nbsp;</span>}
+      {index && <span className="text-dim">{index} / 08&nbsp;&nbsp;</span>}
       {children}
     </div>
   );

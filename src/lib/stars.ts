@@ -3,4 +3,4 @@
 // re-fetches the live count on mount and updates if it changed. Display is
 // gated on count > 0 so a fresh repo never shows an unflattering "★ 0".
 export const GH_REPO = "znasllc-io/MemQL";
-export const GH_STARS = 0;
+export const GH_STARS = 2;
