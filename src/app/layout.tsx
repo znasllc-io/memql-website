@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Source_Serif_4, JetBrains_Mono, Squada_One, Inter } from "next/font/google";
 import "./globals.css";
+import { TransitionProvider } from "@/components/Transition";
 
 // Workhorse grotesk — body + UI text (the category default). Headlines and
 // the closing quote stay serif; serif is now our one "personality face."
@@ -116,7 +117,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${sans.variable} ${serif.variable} ${mono.variable} ${display.variable}`}>
       <body>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
-        {children}
+        <TransitionProvider>{children}</TransitionProvider>
       </body>
     </html>
   );

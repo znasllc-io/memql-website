@@ -7,8 +7,11 @@ import ConceptGraph from "@/components/ConceptGraph";
 import CockpitConsole from "@/components/CockpitConsole";
 import ThemeToggle from "@/components/ThemeToggle";
 import WindowControls from "@/components/WindowControls";
+import DocsFab from "@/components/DocsFab";
+import { NeuronLink } from "@/components/Transition";
 import { useOS } from "@/lib/useOS";
 import { GH_REPO, GH_STARS } from "@/lib/stars";
+import { tokenize, tokenClass } from "@/lib/tokenize";
 
 // Live star count: baked value as initial state, re-fetched client-side on
 // mount. Failures keep the baked value. Consumers gate display on > 0.
@@ -203,6 +206,7 @@ export default function Home() {
         <Close />
         <Footer />
       </main>
+      <DocsFab />
     </>
   );
 }
@@ -221,6 +225,12 @@ function Nav() {
           </span>
         </a>
         <div className="flex items-center gap-4">
+          <NeuronLink
+            href="/docs"
+            className="font-mono text-[12px] uppercase tracking-wider text-muted transition-colors hover:text-fg"
+          >
+            docs
+          </NeuronLink>
           {stars > 0 && (
             <a
               href={`https://github.com/${GH_REPO}`}
@@ -970,9 +980,14 @@ function Footer() {
             MemQL<span className="text-accent">.</span>
           </span>
         </div>
-        <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-dim">
-          prototype · {new Date().getFullYear()}
-        </span>
+        <div className="flex items-center gap-6">
+          <NeuronLink href="/docs" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+            docs
+          </NeuronLink>
+          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-dim">
+            prototype · {new Date().getFullYear()}
+          </span>
+        </div>
       </div>
     </footer>
   );
@@ -1314,44 +1329,4 @@ const CodeBlock = memo(function CodeBlock({
   );
 });
 
-type Kind = "annotation" | "keyword" | "string" | "number" | "comment" | "doc" | "plain";
-
-function tokenize(line: string, lang: "memql" | "python"): { text: string; kind: Kind }[] {
-  const out: { text: string; kind: Kind }[] = [];
-  const re = lang === "memql"
-    ? /(@description\("[^"]*"\))|("[^"]*")|(@[A-Za-z_][A-Za-z0-9_]*)|\b(concept|query|mutation|automation|prompt|provider|tool|policy|step|logic|args|filter|shape|insert|params|true|false|bool|int|string|float|object)\b|\b(\d+(?:\.\d+)?)\b/g
-    : /(#[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(\d+(?:\.\d+)?)\b|\b(def|from|import|for|if|else|elif|not|return|as|in|is|None|True|False)\b/g;
-
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(line)) !== null) {
-    if (m.index > last) out.push({ text: line.slice(last, m.index), kind: "plain" });
-    if (lang === "memql") {
-      if (m[1]) out.push({ text: m[1], kind: "doc" });
-      else if (m[2]) out.push({ text: m[2], kind: "string" });
-      else if (m[3]) out.push({ text: m[3], kind: "annotation" });
-      else if (m[4]) out.push({ text: m[4], kind: "keyword" });
-      else if (m[5]) out.push({ text: m[5], kind: "number" });
-    } else {
-      if (m[1]) out.push({ text: m[1], kind: "comment" });
-      else if (m[2]) out.push({ text: m[2], kind: "string" });
-      else if (m[3]) out.push({ text: m[3], kind: "number" });
-      else if (m[4]) out.push({ text: m[4], kind: "keyword" });
-    }
-    last = m.index + m[0].length;
-  }
-  if (last < line.length) out.push({ text: line.slice(last), kind: "plain" });
-  return out;
-}
-
-function tokenClass(kind: Kind): string {
-  switch (kind) {
-    case "annotation": return "text-accent";
-    case "keyword":    return "text-accent-bright";
-    case "string":     return "text-string";
-    case "number":     return "text-number";
-    case "comment":    return "text-dim italic";
-    case "doc":        return "text-muted italic";
-    default:           return "text-fg-dim";
-  }
-}
+// Syntax highlighting lives in @/lib/tokenize (shared with the docs renderer).

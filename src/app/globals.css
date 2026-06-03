@@ -74,6 +74,11 @@
   --c-number: #0f766e;          /* teal-green — code numbers, distinct from keyword */
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6.5rem; /* clears the fixed header on anchor jumps */
+}
+
 html, body {
   background: var(--color-bg);
   color: var(--color-fg);
@@ -133,6 +138,21 @@ html, body {
   .tab-hint { animation: none; opacity: 1; }
 }
 
+/* Floating docs button — a soft breathing emerald glow so it reads as a
+   persistent, findable affordance without shouting. Disabled under
+   reduced-motion (keeps a static resting glow). */
+.docs-fab {
+  box-shadow: 0 6px 22px rgba(0, 157, 113, 0.28);
+  animation: fab-glow 3.6s ease-in-out infinite;
+}
+@keyframes fab-glow {
+  0%, 100% { box-shadow: 0 6px 22px rgba(0, 157, 113, 0.26); }
+  50%      { box-shadow: 0 8px 30px rgba(0, 157, 113, 0.45); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-fab { animation: none; box-shadow: 0 6px 22px rgba(0, 157, 113, 0.3); }
+}
+
 /* Hero atmosphere — radial green glow, very subtle */
 .hero-glow {
   position: absolute;
@@ -180,6 +200,111 @@ html, body {
   background-image:
     linear-gradient(to right, rgba(2, 104, 66, 0.06) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(2, 104, 66, 0.06) 1px, transparent 1px);
+}
+
+/* ── Synapse-bloom page transition ───────────────────────────────────
+   A neuron fires from the click point: an emerald flare blooms to cover
+   the page swap, dendrites radiate from the origin, then it dissolves to
+   reveal the destination. Phases are driven by [data-phase] from
+   Transition.tsx. Reduced-motion users never see the overlay (the
+   provider skips it), but we also hard-disable the motion here. */
+.neuron-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  overflow: hidden;
+}
+.neuron-overlay[data-phase="covering"],
+.neuron-overlay[data-phase="revealing"] {
+  pointer-events: auto;
+}
+
+.neuron-bloom {
+  position: absolute;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  will-change: transform, opacity;
+  /* A calm emerald glow built from the deeper brand greens — no near-white
+     hot core, so it reads as a synapse pulse, not a flash. The page-bg
+     outer stops still mask the route swap underneath. */
+  background: radial-gradient(
+    circle,
+    rgba(92, 205, 167, 0.40) 0%,
+    var(--c-accent-deep) 20%,
+    var(--c-accent-darkest) 40%,
+    var(--c-bg) 66%,
+    var(--c-bg) 100%
+  );
+}
+.neuron-overlay[data-phase="covering"] .neuron-bloom {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  transition:
+    transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 150ms ease-out;
+}
+.neuron-overlay[data-phase="revealing"] .neuron-bloom {
+  transform: translate(-50%, -50%) scale(1.06);
+  opacity: 0;
+  transition:
+    transform 320ms ease-in,
+    opacity 300ms ease-in;
+}
+
+.neuron-dendrites {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.neuron-dendrites-g {
+  opacity: 0;
+  transform: scale(0.42);
+  filter: drop-shadow(0 0 4px rgba(92, 205, 167, 0.4));
+}
+.neuron-overlay[data-phase="covering"] .neuron-dendrites-g {
+  opacity: 0.8;
+  transform: scale(1);
+  transition:
+    transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 180ms ease-out;
+}
+.neuron-overlay[data-phase="revealing"] .neuron-dendrites-g {
+  opacity: 0;
+  transform: scale(1.18);
+  transition:
+    transform 320ms ease-in,
+    opacity 260ms ease-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neuron-overlay { display: none; }
+}
+
+/* Typewriter caret — a thin emerald bar that blinks while the docs headline
+   types itself in, then fades out shortly after it finishes. */
+.tw-caret {
+  display: inline-block;
+  width: 0.07em;
+  height: 0.86em;
+  margin-left: 0.08em;
+  vertical-align: -0.06em;
+  background: var(--c-accent);
+  box-shadow: 0 0 8px rgba(92, 205, 167, 0.55);
+  animation: tw-blink 1s steps(1) infinite;
+}
+.tw-caret-done {
+  animation:
+    tw-blink 1s steps(1) infinite,
+    tw-fade 0.5s ease-out 0.6s forwards;
+}
+@keyframes tw-blink {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+@keyframes tw-fade {
+  to { opacity: 0; }
 }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
