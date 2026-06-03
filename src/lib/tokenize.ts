@@ -110,8 +110,9 @@ const DOCKER_KW = [
 
 const MEMQL_KW = [
   "concept", "query", "mutation", "automation", "prompt", "provider", "tool",
-  "policy", "step", "logic", "args", "filter", "shape", "insert", "params",
-  "true", "false", "bool", "int", "string", "float", "object",
+  "policy", "spec", "shape", "builtin", "logic", "seed", "step", "args", "body",
+  "filter", "insert", "params", "coalesce", "if", "return", "enum",
+  "true", "false", "bool", "int", "string", "float", "object", "datetime",
 ];
 
 function buildRules(lang: Lang): Rule[] {

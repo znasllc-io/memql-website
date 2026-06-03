@@ -4,6 +4,7 @@ import Image from "next/image";
 import { memo, useState, useRef, useCallback, useEffect, useMemo } from "react";
 import HeroGraph from "@/components/HeroGraph";
 import ConceptGraph from "@/components/ConceptGraph";
+import AgentLoopGraph from "@/components/AgentLoopGraph";
 import CockpitConsole from "@/components/CockpitConsole";
 import ThemeToggle from "@/components/ThemeToggle";
 import WindowControls from "@/components/WindowControls";
@@ -39,12 +40,131 @@ function formatStars(n: number): string {
 const AUTOMATION_MEMQL = `@enabled
 @trigger(event="node.created", concept="v1:cognition:space", partition="*")
 @filter(payload.active==true)
-@description("On space creation, joins the creator's general assistant plus any specialist agents picked at creation time.")
-@useLogic(logicAutoJoinSI)
+@description("On space creation, joins the creator's assistant plus any specialist agents picked at creation time. Joiners' GAs are never auto-joined.")
 automation autoJoinSI {
   step run {
     logic autoJoinSI { event: event }
   }
+}`;
+
+// The logic the automation dispatches — trimmed from dsl/cognition/logic.memql.
+const LOGIC_MEMQL = `@description("Triggered when a v1:cognition:space is created with status='active'. Auto-joins the creator's currently-active assistant as a v1:cognition:participant. The ONLY AI participant a space carries (maxAgents=1). Idempotent. Emits 'si.auto-joined'.")
+logic logicAutoJoinSI {
+  args {
+    event object @required
+  }
+  body {
+    getUser := queryUserById({ userId: args.event.payload.ownerUserId })
+    activeAssistantId := coalesce(getUser.First().payload.preferences.activeAssistantId, "")
+
+    // Exactly one of these fires, decided by activeAssistantId emptiness:
+    getActiveGA := if activeAssistantId != "" {
+      queryAgentById({ agentId: activeAssistantId })
+    }
+    getFallbackGA := if activeAssistantId == "" {
+      queryAssistantAgentForUser({ ownerUserId: args.event.payload.ownerUserId })
+    }
+    getGA := coalesce(getActiveGA, getFallbackGA)
+
+    // ...resolve the canonical agent id, then dispatch:
+    //   mutationJoinSpaceAsSI                (insert the SI participant)
+    //   mutationCreateSessionForParticipant  (bootstrap its session)
+  }
+}`;
+
+// Move 2a — recall(): recency x relevance in one SQL statement.
+const RECALL_MEMQL = `@enabled
+@sdk
+@executor("integration.harnessRecall.recall")
+@args(profile="object", additionalProperties="true")
+@description("Recall top-k memories of a concept (default v1:harness:observation) by a SINGLE hybrid recency x relevance score: pgvector cosine similarity + exponential time-decay over createdAt, scored and ordered server-side in one SQL statement against the MemoryNodes hypertable (no app-side merge). Owner-scoped; window prunes hypertable chunks; halfLife + wSem/wRec are tunable.")
+builtin recall {
+  text      string  @required
+  concept   string
+  k         int
+  provider  string
+}`;
+
+// Move 2b — the harness spine: plan / step / observation (trimmed).
+const HARNESS_MEMQL = `// The whole agent working-state model — no external task
+// table, no audit log, no state store. (trimmed: real
+// concepts carry @description / @displayCard / @relationship.)
+
+concept plan {
+  ownerUserId  string  @required
+  goal         string  @required
+  status       enum("open", "running", "done", "failed", "cancelled")  @required @default("open")
+  rootStepId   string
+  input        object
+  result       object
+  provenanceMutation  string
+}
+
+concept step {
+  ownerUserId    string  @required
+  planId         string  @required
+  title          string  @required
+  status         enum("pending", "ready", "running", "blocked", "done", "failed")  @required @default("pending")
+  dependsOn      []string
+  idempotencyKey string  @required
+  attempt        int     @required @default("0")
+  result         object
+}
+
+concept observation {
+  ownerUserId  string  @required
+  stepId       string  @required
+  kind         enum("tool_result", "error", "note", "decision")  @required
+  content      string  @required
+  embedding    []float
+}`;
+
+// The scheduled automation behind the consolidation pass — a temporal
+// trigger (description trimmed from dsl/harness/automations.memql).
+const CRON_MEMQL = `@enabled
+@trigger(schedule="0 45 2 * * *")
+@description("Daily 02:45 UTC memory consolidation. Per owner: reads episodic nodes (plans / steps / observations) since that owner's watermark, groups them by similarity, LLM-distills stable facts, dedups against existing semantic memories, decays + prunes stale beliefs, then advances the watermark so the next run is incremental.")
+automation consolidateMemory {
+  step run {
+    logic consolidateMemory { event: event }
+  }
+}`;
+
+// Move 3 — the four constructs the showcase was missing.
+const SPEC_MEMQL = `@description("Matches participants with human participantType")
+spec specIsHumanParticipant {
+  payload.participantType == "human"
+}`;
+
+const SHAPE_MEMQL = `@row
+@description("Comprehensive participant projection with all fields")
+shape participant participantFull {
+  row.id
+  payload.spaceId
+  payload.userId
+  payload.agentId
+  payload.participantType
+  payload.displayName
+  payload.status
+  payload.joinedAt
+  payload.leftAt
+  payload.capabilityOverrides
+  payload.hidden
+  row.createdAt
+}`;
+
+const BUILTIN_MEMQL = `@enabled
+@executor("integration.chat.recentChat")
+@args(profile="object")
+@description("Read recent utterances + space context. Five operations: readRecent / readByKeyword / readByTime / getSpaceContext / listParticipants.")
+builtin recentChat {
+  spaceId    string  @required
+  agentId    string
+  operation  string  @required
+  count      int
+  keyword    string
+  fromTime   string
+  toTime     string
 }`;
 
 const CONCEPT_MEMQL = `@description("A streaming text chunk emitted incrementally during AI response generation.")
@@ -134,13 +254,13 @@ tool canvasPublish {
   note        string           @description("Optional freeform line, 240 chars max")
 }`;
 
-const POLICY_MEMQL = `@primary("streamClaudeSonnet")
-@fallback("stream54Pro")
-@fallback("streamGeminiPro")
-@maxLatencyMs(60000)
-@preferredRole("general_assistant")
-@description("Default chat policy — Claude Sonnet 4.6 primary, GPT-5.4 Pro fallback, Gemini Pro tertiary.")
-policy balancedChat { }`;
+const POLICY_MEMQL = `@primary("streamGroqLlama70B")
+@fallback("streamGeminiFlash")
+@fallback("stream54Mini")
+@maxTimeToFirstTokenMs(800)
+@maxLatencyMs(10000)
+@description("Low latency voice -- turn-taking in multi-party voice conversations. Groq is the best-in-class for first-token latency; Gemini Flash as a fallback matches the target TTFT envelope.")
+policy lowLatencyVoice { }`;
 
 const DUCT_TAPE_PY = `# on_space_created.py — today
 from postgres import db
@@ -167,7 +287,8 @@ def on_space_created(payload):
 
 type ConstructName =
   | "concept" | "query" | "mutation" | "automation"
-  | "prompt"  | "provider" | "tool" | "policy";
+  | "prompt"  | "provider" | "tool" | "policy"
+  | "spec"    | "shape"    | "builtin" | "logic";
 
 type Construct = {
   name: ConstructName;
@@ -181,10 +302,14 @@ const CONSTRUCTS: Construct[] = [
   { name: "query",      blurb: "Read. Typed, filtered, shaped.",            file: "dsl/cognition/queries.memql",     code: QUERY_MEMQL },
   { name: "mutation",   blurb: "Write. Atomic. Event-emitting.",            file: "dsl/cognition/mutations.memql",   code: MUTATION_MEMQL },
   { name: "automation", blurb: "React. Subscribe to typed events.",         file: "dsl/cognition/automations.memql", code: AUTOMATION_MEMQL },
+  { name: "logic",      blurb: "Procedure. Multi-step orchestration.",      file: "dsl/cognition/logic.memql",       code: LOGIC_MEMQL },
   { name: "prompt",     blurb: "LLM input. Versioned, provider-routed.",    file: "dsl/cognition/prompts.memql",     code: PROMPT_MEMQL },
   { name: "provider",   blurb: "Vendor + model. Cost-tagged.",              file: "dsl/providers/providers.memql",   code: PROVIDER_MEMQL },
+  { name: "policy",     blurb: "Cross-cutting. SLA-aware routing.",         file: "dsl/policies/policies.memql",     code: POLICY_MEMQL },
   { name: "tool",       blurb: "Capability. Scoped, agent-callable.",       file: "dsl/copresent/tools.memql",       code: TOOL_MEMQL },
-  { name: "policy",     blurb: "Cross-cutting. Defaults, fallbacks.",       file: "dsl/policies/policies.memql",     code: POLICY_MEMQL },
+  { name: "builtin",    blurb: "Go capability behind a DSL schema.",        file: "dsl/cognition/builtins.memql",    code: BUILTIN_MEMQL },
+  { name: "spec",       blurb: "Predicate. Compiles to a SQL WHERE.",       file: "dsl/cognition/specs.memql",       code: SPEC_MEMQL },
+  { name: "shape",      blurb: "Projection. Reusable field selection.",     file: "dsl/cognition/shapes.memql",      code: SHAPE_MEMQL },
 ];
 
 /* ───────────────────────────── page ───────────────────────────── */
@@ -200,6 +325,7 @@ export default function Home() {
         <AgentLoop />
         <How />
         <Compare />
+        <Composition />
         <Language />
         <Cockpit />
         <ForWhom />
@@ -436,20 +562,25 @@ function What() {
 }
 
 function AgentLoop() {
+  // phases driven by the loop graph: 1 harness · 2 memory · 3 inspectable
+  // (column order matches the headline: plan, remember, held to account)
+  const [phase, setPhase] = useState(0);
+  const onPhase = useCallback((p: number) => setPhase(p), []);
+
   const cols: { label: string; body: React.ReactNode }[] = [
-    {
-      label: "// memory",
-      body: (
-        <>
-          Consolidation turns episodic memory &mdash; what happened &mdash; into semantic knowledge: what&rsquo;s true in general. <Inline>recall()</Inline> blends recency &times; relevance; semantic retrieval finds by meaning. Episodic, semantic, similarity &mdash; one memory, mechanical not metaphor.
-        </>
-      ),
-    },
     {
       label: "// the harness",
       body: (
         <>
           Agents work through whole tasks, not just react. A structured loop &mdash; <Inline>plan</Inline>, <Inline>step</Inline>, <Inline>observation</Inline> &mdash; with budgets, retries, and stopping rules. The planner runs reactively (tick &rarr; route &rarr; converge), and an agent can pause to ask you via <Inline>requestUserFeedback</Inline>.
+        </>
+      ),
+    },
+    {
+      label: "// memory",
+      body: (
+        <>
+          Consolidation turns episodic memory &mdash; what happened &mdash; into semantic knowledge: what&rsquo;s true in general. <Inline>recall()</Inline> blends recency &times; relevance; semantic retrieval finds by meaning. Episodic, semantic, similarity &mdash; one memory, mechanical not metaphor.
         </>
       ),
     },
@@ -468,16 +599,78 @@ function AgentLoop() {
       <Lede className="max-w-[44em]">
         Storing data and reacting to events is table stakes. MemQL is where agents run whole tasks against a memory that behaves like memory &mdash; and where you can watch exactly what they did.
       </Lede>
-      <div className="mt-14 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
-        {cols.map((c) => (
-          <Reveal key={c.label} delay={80}>
-            <Label tone="accent" as="h3">{c.label}</Label>
-            <p className="text-[16px] leading-[1.65] text-fg">{c.body}</p>
-          </Reveal>
-        ))}
+      <p className="mt-7 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
+        A plan fans into steps, each step leaves an observation, recall pulls the relevant ones back, and the whole run replays. Watch.
+      </p>
+
+      <Reveal delay={120} className="mt-10 overflow-hidden rounded-lg border border-border bg-bg-elev/40">
+        <AgentLoopGraph onPhase={onPhase} />
+      </Reveal>
+
+      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
+        {cols.map((c, i) => {
+          const lit = phase >= i + 1;
+          return (
+            <div
+              key={c.label}
+              className={`border-l-2 pl-5 transition-all duration-500 ${
+                lit ? "border-accent" : "border-border"
+              }`}
+            >
+              <h3
+                className={`mb-3 font-mono text-[11px] uppercase tracking-[0.18em] transition-colors duration-500 ${
+                  lit ? "text-accent" : "text-dim"
+                }`}
+              >
+                {c.label}
+              </h3>
+              <p
+                className={`text-[16px] leading-[1.65] transition-colors duration-500 ${
+                  lit ? "text-fg" : "text-muted"
+                }`}
+              >
+                {c.body}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
-      <p className="mt-14 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
+      {/* the differentiator, in the schema — recall() + the harness spine */}
+      <Reveal delay={80} className="mt-16">
+        <Label tone="accent" as="h3">// memory, in the schema</Label>
+        <div className="mt-4 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
+          <CodeWindow filename="dsl/harness/queries.memql">
+            <CodeBlock code={RECALL_MEMQL} lang="memql" />
+          </CodeWindow>
+          <p className="text-[15.5px] leading-[1.7] text-fg-dim lg:pt-2">
+            One hybrid score &mdash; <Inline>wSem · cosine(query, memory) + wRec · exp(−ln2 · age / halfLife)</Inline> &mdash; computed and ordered server-side in a single SQL statement, no app-side merge. A debugging agent raises <Inline>wRec</Inline> for &ldquo;what just happened&rdquo;; a research agent raises <Inline>wSem</Inline> for &ldquo;everything relevant, ever.&rdquo; Memory that behaves like a mind, not a log.
+          </p>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
+          <CodeWindow filename="dsl/harness/concepts.memql  (trimmed)">
+            <CodeBlock code={HARNESS_MEMQL} lang="memql" />
+          </CodeWindow>
+          <div className="text-[15.5px] leading-[1.7] text-fg-dim lg:pt-2">
+            <p>
+              A plan, its steps (a real DAG via <Inline>dependsOn</Inline>, with <Inline>idempotencyKey</Inline> for safe replay), and every observation an agent makes &mdash; all append-only rows with automatic provenance. Invalid transitions like <Inline>done &rarr; running</Inline> are rejected by the engine. Observations carry an embedding, so an agent can semantically search its own history: <em>&ldquo;what did I try last time I hit this error?&rdquo;</em>
+            </p>
+            <p className="mt-4">
+              <span className="font-mono text-[13px] text-accent">// consolidation</span> &middot; a scheduled per-owner pass reads new observations since a watermark, clusters them by similarity, distills each cluster into a durable belief, dedupes, decays the unreinforced, and advances the watermark. What happened becomes what&rsquo;s true.
+            </p>
+          </div>
+        </div>
+        <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
+          <CodeWindow filename="dsl/harness/automations.memql  (trimmed)">
+            <CodeBlock code={CRON_MEMQL} lang="memql" />
+          </CodeWindow>
+          <p className="text-[15.5px] leading-[1.7] text-fg-dim lg:pt-2">
+            And automations fire on clocks, not just events. This is the scheduled automation that runs that pass &mdash; <Inline>0 45 2 * * *</Inline>, daily at 02:45 UTC, deliberately offset past the other nightly sweeps so they don&rsquo;t contend for the same DB window. Real production scheduling, not a toy.
+          </p>
+        </div>
+      </Reveal>
+
+      <p className="mt-16 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
         <span className="text-accent">// tools</span> &middot; calendar &middot; notes &middot; tasks &middot; responsibilities &mdash; each a concept, a tool, and a skill. The Library subsystem stores and faceted-queries everything they produce.
       </p>
     </Section>
@@ -729,6 +922,62 @@ function ComparisonSlider() {
   );
 }
 
+/* ───────────────────────── composition ───────────────────────── */
+
+function Composition() {
+  // one write rippling through five real constructs
+  const chain: [string, string, string][] = [
+    ["concept",    "space",                 "a row is written"],
+    ["event",      "node.created",          "emitted on insert"],
+    ["automation", "autoJoinSI",            "@trigger subscribes"],
+    ["logic",      "logicAutoJoinSI",       "resolves the assistant"],
+    ["mutation",   "mutationJoinSpaceAsSI", "+ session bootstrap"],
+  ];
+  return (
+    <Section eyebrow="composition" index="05">
+      <Headline>One event. Five constructs. Zero glue.</Headline>
+      <Lede className="max-w-[44em]">
+        The fragmented Python above is the stack you assemble by hand. Here is the same outcome, declared &mdash; one write ripples through five real constructs, and the engine handles the rest.
+      </Lede>
+
+      {/* the chain */}
+      <Reveal delay={120} className="mt-12">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch lg:gap-0">
+          {chain.map(([kind, name, note], i) => (
+            <div key={name} className="flex flex-col lg:flex-1 lg:flex-row lg:items-center">
+              <div className="flex-1 rounded-lg border border-border bg-bg-elev/40 px-4 py-3">
+                <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-accent">{kind}</div>
+                <div className="mt-1 font-mono text-[13px] text-fg break-all">{name}</div>
+                <div className="mt-0.5 font-mono text-[11px] text-dim">{note}</div>
+              </div>
+              {i < chain.length - 1 && (
+                <div aria-hidden="true" className="flex items-center justify-center py-1 text-accent lg:px-2.5 lg:py-0">
+                  <span className="lg:hidden">↓</span>
+                  <span className="hidden lg:inline">→</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Reveal>
+
+      {/* the two real constructs that carry the chain */}
+      <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <CodeWindow filename="dsl/cognition/automations.memql">
+          <CodeBlock code={AUTOMATION_MEMQL} lang="memql" />
+        </CodeWindow>
+        <CodeWindow filename="dsl/cognition/logic.memql  (trimmed)">
+          <CodeBlock code={LOGIC_MEMQL} lang="memql" />
+        </CodeWindow>
+      </div>
+
+      <p className="mt-10 max-w-[46em] text-[16px] leading-[1.7] text-fg-dim">
+        A user creates a space. That insert emits a typed <Inline>node.created</Inline> event. An automation is already subscribed to it. It dispatches a piece of logic that resolves the user&rsquo;s assistant and writes two rows &mdash; a participant and its session. Idempotency, partition isolation, audit provenance, and retries aren&rsquo;t code you wrote. They&rsquo;re the substrate.
+      </p>
+    </Section>
+  );
+}
+
 /* ───────────────────────── language showcase ───────────────────────── */
 
 function Language() {
@@ -750,10 +999,10 @@ function Language() {
   };
 
   return (
-    <Section eyebrow="the language" index="05" grid>
-      <Headline>Eight constructs. One file format.</Headline>
+    <Section eyebrow="the language" index="06" grid>
+      <Headline>Twelve constructs. One file format.</Headline>
       <Lede className="max-w-[36em]">
-        Every behavior in the system is described as a typed construct in a <Inline>.memql</Inline> file. The vocabulary is small. The system is what those eight nouns compose into.
+        Every behavior in the system is described as a typed construct in a <Inline>.memql</Inline> file. The vocabulary is small. The system is what those twelve nouns compose into.
       </Lede>
 
       <Reveal delay={120} className="mt-12 overflow-hidden rounded-lg border border-border bg-bg-elev">
@@ -761,7 +1010,7 @@ function Language() {
         <div
           role="tablist"
           aria-label="MemQL DSL constructs"
-          className="grid grid-cols-4 border-b border-border sm:grid-cols-8"
+          className="grid grid-cols-3 border-b border-border sm:grid-cols-6"
         >
           {CONSTRUCTS.map((c, i) => {
             const isActive = c.name === active;
@@ -847,7 +1096,7 @@ function Cockpit() {
             Cockpit<span className="text-accent">.</span>
           </span>
         </div>
-        <Eyebrow id="cockpit-eyebrow" index="06">cockpit</Eyebrow>
+        <Eyebrow id="cockpit-eyebrow" index="07">cockpit</Eyebrow>
         <Headline>A TUI that ships with the platform.</Headline>
         <Lede className="max-w-[46em]">
           A second product, in your terminal. Terminal-native IDE and operations console for MemQL clusters &mdash; write, lint, and execute DSL; explore cluster state; manage identity and workers; observe the platform in real time. No web app. No Electron. Just gRPC to the cluster.
@@ -932,7 +1181,7 @@ function ForWhom() {
     },
   ];
   return (
-    <Section eyebrow="who it's for" index="07">
+    <Section eyebrow="who it's for" index="08">
       <Headline>Three readers.</Headline>
       <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-3">
         {items.map((it, i) => (
@@ -953,9 +1202,9 @@ function Close() {
     <section id="project" className="relative overflow-hidden border-t border-border">
       <div className="hero-glow" />
       <div className="relative mx-auto max-w-[760px] px-8 py-32 text-center">
-        <Eyebrow center index="08">the project</Eyebrow>
+        <Eyebrow center index="09">the project</Eyebrow>
         <p className="mx-auto mt-8 max-w-[32em] font-serif text-[24px] leading-[1.45] text-fg sm:text-[28px]">
-          MemQL and MemQL Cockpit are open source, Apache 2.0. Designed and built with Claude as co-author. Alpha.
+          MemQL and MemQL Cockpit are open source, Apache 2.0. Alpha.
         </p>
         <p className="mx-auto mt-9 max-w-[34em] font-mono text-[12.5px] leading-[1.65] text-muted">
           Memory Query Language &mdash; built to be to AI memory what SQL is to relational data.
@@ -1161,7 +1410,7 @@ function GithubMenu({
 function Eyebrow({ children, center = false, id, index }: { children: React.ReactNode; center?: boolean; id?: string; index?: string }) {
   return (
     <div id={id} className={`font-mono text-[11px] uppercase tracking-[0.22em] text-accent ${center ? "text-center" : ""}`}>
-      {index && <span className="text-dim">{index} / 08&nbsp;&nbsp;</span>}
+      {index && <span className="text-dim">{index} / 09&nbsp;&nbsp;</span>}
       {children}
     </div>
   );
