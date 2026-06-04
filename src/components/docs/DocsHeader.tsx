@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
 import { NeuronLink } from "@/components/Transition";
 
@@ -17,12 +16,12 @@ export default function DocsHeader() {
         className="flex flex-1 items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md"
       >
         <div className="flex items-center gap-2.5">
-          <Link href="/docs" aria-label="MemQL docs — home" className="flex items-center gap-2.5">
+          <NeuronLink href="/" aria-label="MemQL — home" className="flex items-center gap-2.5">
             <Image src="/memql-mark.png" alt="" width={28} height={28} priority className="h-7 w-7 object-contain" />
             <span className="font-display text-[20px] leading-none tracking-wide text-fg">
               MemQL<span className="text-accent">.</span>
             </span>
-          </Link>
+          </NeuronLink>
           <span className="font-mono text-[12px] tracking-wide text-dim">/ docs</span>
         </div>
         <div className="flex items-center gap-5">

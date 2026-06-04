@@ -1237,24 +1237,21 @@ function Footer() {
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <a href="/about" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+          <NeuronLink href="/about" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
             about
-          </a>
+          </NeuronLink>
           <NeuronLink href="/docs" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
             docs
           </NeuronLink>
-          <a href="/ai-harness" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+          <NeuronLink href="/ai-harness" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
             ai harness
-          </a>
-          <a href="/memql-vs-vector-memory" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+          </NeuronLink>
+          <NeuronLink href="/memql-vs-vector-memory" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
             vs vector memory
-          </a>
-          <a href="/glossary" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+          </NeuronLink>
+          <NeuronLink href="/glossary" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
             glossary
-          </a>
-          <a href="/privacy" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
-            privacy
-          </a>
+          </NeuronLink>
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-dim">
             prototype · {new Date().getFullYear()}
           </span>

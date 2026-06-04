@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Markdown from "@/components/docs/Markdown";
 import TableOfContents from "@/components/docs/TableOfContents";
+import { NeuronLink } from "@/components/Transition";
 import { DOC_LIST, loadDoc } from "@/lib/docs";
 
 export const dynamicParams = false;
@@ -79,7 +80,7 @@ export default async function DocPage({
           className="mt-16 grid grid-cols-1 gap-4 border-t border-border pt-8 sm:grid-cols-2"
         >
           {prev ? (
-            <Link
+            <NeuronLink
               href={`/docs/${prev.slug}`}
               className="group rounded-lg border border-border bg-bg-elev/40 px-5 py-4 transition-colors hover:border-border-strong"
             >
@@ -89,12 +90,12 @@ export default async function DocPage({
               <div className="mt-1 text-[15px] font-medium text-fg group-hover:text-accent">
                 {prev.title}
               </div>
-            </Link>
+            </NeuronLink>
           ) : (
             <span />
           )}
           {next ? (
-            <Link
+            <NeuronLink
               href={`/docs/${next.slug}`}
               className="group rounded-lg border border-border bg-bg-elev/40 px-5 py-4 text-right transition-colors hover:border-border-strong"
             >
@@ -104,7 +105,7 @@ export default async function DocPage({
               <div className="mt-1 text-[15px] font-medium text-fg group-hover:text-accent">
                 {next.title}
               </div>
-            </Link>
+            </NeuronLink>
           ) : (
             <span />
           )}
