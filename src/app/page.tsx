@@ -673,6 +673,13 @@ function AgentLoop() {
       <p className="mt-16 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
         <span className="text-accent">// tools</span> &middot; calendar &middot; notes &middot; tasks &middot; responsibilities &mdash; each a concept, a tool, and a skill. The Library subsystem stores and faceted-queries everything they produce.
       </p>
+      <p className="mt-6 max-w-[44em] font-mono text-[13px] leading-[1.6] text-dim">
+        <span className="text-accent">// new here?</span> &middot;{" "}
+        <a href="/ai-harness" className="text-muted underline decoration-border underline-offset-2 transition-colors hover:text-fg hover:decoration-accent">
+          What is an AI harness?
+        </a>{" "}
+        &mdash; the model-plus-harness primer, and where memory fits.
+      </p>
     </Section>
   );
 }
@@ -734,7 +741,7 @@ function Compare() {
         From a duct-taped stack to nine lines of MemQL.
       </Headline>
       <Lede className="max-w-[34em]">
-        Postgres next to a vector DB next to a custom event bus next to an OpenAI wrapper next to a retry-logic file. You&rsquo;ve built it. Drag the divider.
+        A Postgres. A vector DB. An event bus. An OpenAI wrapper. A retry-logic file. Five systems, kept in sync by hand. You&rsquo;ve built it. Drag the divider.
       </Lede>
       <Reveal delay={120} className="mt-12">
         <ComparisonSlider />
@@ -1229,10 +1236,25 @@ function Footer() {
             MemQL<span className="text-accent">.</span>
           </span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <a href="/about" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+            about
+          </a>
           <NeuronLink href="/docs" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
             docs
           </NeuronLink>
+          <a href="/ai-harness" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+            ai harness
+          </a>
+          <a href="/memql-vs-vector-memory" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+            vs vector memory
+          </a>
+          <a href="/glossary" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+            glossary
+          </a>
+          <a href="/privacy" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-fg">
+            privacy
+          </a>
           <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-dim">
             prototype · {new Date().getFullYear()}
           </span>

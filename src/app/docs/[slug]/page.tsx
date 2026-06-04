@@ -39,8 +39,20 @@ export default async function DocPage({
 
   const { meta, content, toc, section, prev, next } = doc;
 
+  const techArticleLd = {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    headline: meta.title,
+    description: meta.blurb,
+    url: `https://memql.io/docs/${slug}`,
+    isPartOf: { "@type": "WebSite", name: "MemQL", url: "https://memql.io" },
+    publisher: { "@type": "Organization", name: "ZNAS", url: "https://znas.io" },
+    inLanguage: "en",
+  };
+
   return (
     <div className="flex gap-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(techArticleLd) }} />
       <article className="min-w-0 max-w-[760px] flex-1 pb-24">
         {/* breadcrumb */}
         <div className="mb-6 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-dim">
