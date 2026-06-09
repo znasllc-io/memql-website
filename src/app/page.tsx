@@ -72,12 +72,6 @@ function Nav() {
           >
             docs
           </NeuronLink>
-          <NeuronLink
-            href="/cockpit"
-            className="font-mono text-[12px] uppercase tracking-wider text-muted transition-colors hover:text-fg"
-          >
-            cockpit
-          </NeuronLink>
           {stars > 0 && (
             <a
               href={`https://github.com/${GH_REPO}`}
@@ -93,6 +87,17 @@ function Nav() {
           <div className="hidden sm:block">
             <GithubMenu align="right" variant="nav" />
           </div>
+          {/* Cockpit rendered as its own brand lockup (wordmark + mark), mirroring MemQL */}
+          <NeuronLink
+            href="/cockpit"
+            aria-label="MemQL Cockpit"
+            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+          >
+            <span className="font-display text-[18px] leading-none tracking-wide text-fg">
+              Cockpit<span className="text-accent">.</span>
+            </span>
+            <Image src="/memql-mark.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
+          </NeuronLink>
         </div>
       </nav>
       {/* theme toggle sits OUTSIDE the nav oval as its own control */}
