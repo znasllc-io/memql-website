@@ -1,91 +1,203 @@
-// Pure docs registry + text helpers — NO filesystem access, so this is safe
-// to import from client components (the sidebar, the TOC). The fs-backed
-// loader lives in docs.ts (server-only) and re-exports from here.
+// Pure docs helpers + types — NO filesystem access, so this is safe to import
+// from client components (the sidebar, the TOC, the version dropdown). The
+// fs-backed loader lives in docs.ts (server-only) and re-exports from here.
+//
+// Nav is no longer hardcoded: it is derived from each version's manifest.json
+// (shipped in the release bundle). These helpers turn that manifest into the
+// section/item tree the chrome renders, and map bundle paths <-> route slugs.
 
-export type DocMeta = {
-  slug: string;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type ManifestPage = {
+  path: string; // e.g. "overview/why-memql-harness.md"
   title: string;
+  sinceVersion?: string;
+};
+
+export type ManifestArea = {
+  area: string;
+  pages: ManifestPage[];
+};
+
+export type Manifest = {
+  version: string;
+  engineVersion: string;
+  pageCount: number;
+  areas: string[];
+  nav: ManifestArea[];
+};
+
+export type NavItem = {
+  slug: string; // route slug, e.g. "overview/why-memql-harness"
+  title: string;
+  path: string; // file path: bundle-relative, or site-docs-relative when siteAuthored
+  sinceVersion?: string;
+  generated: boolean; // machine-generated reference (badge it; never hand-edit)
+  siteAuthored: boolean; // written for this site, pending an upstream canonical version
+};
+
+export type NavSection = {
+  area: string;
+  title: string;
+  items: NavItem[];
+};
+
+export type TocEntry = { depth: 2 | 3; text: string; id: string };
+
+// ---------------------------------------------------------------------------
+// Area presentation — the seven doc areas map 1:1 to sidebar sections. Order
+// and labels are the only site-side editorial layer; everything else is the
+// manifest's. Areas not listed fall back to a title-cased label.
+// ---------------------------------------------------------------------------
+
+export const AREA_TITLES: Record<string, string> = {
+  "get-started": "Get started",
+  overview: "Overview",
+  concepts: "Concepts",
+  language: "Language",
+  ai: "AI",
+  operate: "Operate",
+  build: "Build",
+  cockpit: "Cockpit",
+};
+
+// Narrative section order for the sidebar (issue #11's story arc). The manifest
+// drives page order *within* an area; this orders the areas themselves. Areas
+// not listed here fall to the end, in manifest order.
+export const AREA_ORDER = [
+  "get-started",
+  "overview",
+  "concepts",
+  "language",
+  "ai",
+  "operate",
+  "build",
+  "cockpit",
+];
+
+export function areaTitle(area: string): string {
+  return AREA_TITLES[area] ?? area.replace(/(^|[-_])(\w)/g, (_, s, c) => (s ? " " : "") + c.toUpperCase());
+}
+
+// ---------------------------------------------------------------------------
+// Site-authored pages — a thin overlay on the bundle. memQL's docs are
+// source-of-truth upstream, but a few site-only pages (e.g. a friendly
+// Get Started / install page) don't exist upstream yet. They live in
+// src/content/site-docs/, are clearly badged "site-written, pending upstream",
+// and are merged into the nav. When the canonical version ships in a bundle,
+// drop the entry here and the bundle page takes over.
+// ---------------------------------------------------------------------------
+
+export type SitePage = {
+  slug: string; // route slug, e.g. "getting-started"
+  title: string;
+  area: string; // section to merge into, e.g. "get-started"
+  file: string; // relative to src/content/site-docs/
   blurb: string;
-  file: string; // relative to src/content/docs
+  // Bundle paths that, once present in a version's manifest, retire this
+  // placeholder — the canonical upstream page takes over automatically.
+  supersededBy?: string[];
 };
 
-export type DocSection = {
-  title: string;
-  items: DocMeta[];
-};
-
-// Information architecture — the left-rail grouping. Order is meaningful:
-// it drives the sidebar and the prev/next pager.
-export const DOC_SECTIONS: DocSection[] = [
+export const SITE_PAGES: SitePage[] = [
   {
+    slug: "getting-started",
     title: "Get started",
-    items: [
-      { slug: "overview", title: "Overview & architecture", blurb: "The mental model, the layered architecture, the project layout. The front door.", file: "00-overview.md" },
-    ],
-  },
-  {
-    title: "Core concepts",
-    items: [
-      { slug: "data-model", title: "Data model", blurb: "Concepts, nodes, the (partition, id, createdAt) model, partitions, the typed graph-event model.", file: "01-data-model.md" },
-      { slug: "events", title: "Events & automations", blurb: "How events fire, how automations subscribe via @trigger, the logic runner, scheduled crons.", file: "09-events-and-automations.md" },
-      { slug: "memory", title: "Memory & the agent harness", blurb: "Episodic ↔ semantic memory, recall(), consolidation, the plan/step/observation loop, observability.", file: "03-memory-and-harness.md" },
-    ],
-  },
-  {
-    title: "The language",
-    items: [
-      { slug: "dsl", title: "The MemQL DSL", blurb: "Every construct kind with real examples, argument resolution, the dependency tree.", file: "02-dsl-language.md" },
-      { slug: "reference", title: "Reference", blurb: "Exhaustive enumeration: concepts by namespace, tools, providers, policies, builtins.", file: "10-reference.md" },
-    ],
-  },
-  {
-    title: "AI",
-    items: [
-      { slug: "providers", title: "SI providers & policies", blurb: "The AI provider system, the full provider list, routing policies, prompts.", file: "04-si-providers-and-policies.md" },
-      { slug: "integrations", title: "Integrations & tools", blurb: "Voice, avatars, computer-use workers, knowledge/RAG, email, calendar/notes, the Library, training.", file: "05-integrations-and-tools.md" },
-    ],
-  },
-  {
-    title: "Operate",
-    items: [
-      { slug: "cluster", title: "Cluster & deployment", blurb: "Node types (build tags), the mesh, multi-replica concerns, the Azure AKS / GitOps model.", file: "06-cluster-and-deployment.md" },
-      { slug: "auth", title: "Auth & identity", blurb: "The identity service, magic-link, JWKS, partition ACLs, token types, the genesis envelope.", file: "07-auth-and-identity.md" },
-    ],
-  },
-  {
-    title: "Build against it",
-    items: [
-      { slug: "sdk", title: "gRPC API & SDK", blurb: "The gRPC-first wire surface (MemqlService.Stream), message types, the WebSocket bridge, the Go SDK.", file: "08-sdk-and-api.md" },
-    ],
-  },
-  {
-    title: "Cockpit",
-    items: [
-      { slug: "cockpit", title: "Overview", blurb: "What the Cockpit is — terminal IDE + ops console — the launch flow, layout, how it connects.", file: "cockpit/00-overview.md" },
-      { slug: "cockpit-tabs", title: "Tabs & features", blurb: "A tour of every tab: Clusters, Chat, Concepts, Planner, Skills, Workers, Safety, Settings.", file: "cockpit/01-tabs-and-features.md" },
-      { slug: "cockpit-workers", title: "Workers, build & auth", blurb: "Worker run modes, build variants, the first-launch genesis wizard, auth & install.", file: "cockpit/02-workers-build-and-auth.md" },
+    area: "get-started",
+    file: "getting-started.md",
+    blurb: "Install the memQL Cockpit with one command and run your first agent. macOS and Linux.",
+    supersededBy: [
+      "overview/getting-started.md",
+      "overview/get-started.md",
+      "overview/install.md",
+      "get-started/getting-started.md",
+      "get-started/install.md",
     ],
   },
 ];
 
-// Flat, ordered list — used for generateStaticParams and the prev/next pager.
-export const DOC_LIST: DocMeta[] = DOC_SECTIONS.flatMap((s) => s.items);
+// ---------------------------------------------------------------------------
+// Path <-> slug
+// ---------------------------------------------------------------------------
 
-export function getDocBySlug(slug: string): DocMeta | undefined {
-  return DOC_LIST.find((d) => d.slug === slug);
+export function slugFromPath(path: string): string {
+  return path.replace(/\.md$/, "");
 }
 
-export function adjacentDocs(slug: string): { prev?: DocMeta; next?: DocMeta } {
-  const i = DOC_LIST.findIndex((d) => d.slug === slug);
+export function isGeneratedPath(path: string): boolean {
+  return path.includes("_generated");
+}
+
+// ---------------------------------------------------------------------------
+// Manifest -> nav tree
+// ---------------------------------------------------------------------------
+
+export function buildNav(manifest: Manifest, sitePages: SitePage[] = SITE_PAGES): NavSection[] {
+  const byArea = new Map<string, NavItem[]>();
+
+  // Manifest pages first (the canonical bundle content).
+  for (const entry of manifest.nav) {
+    const items = entry.pages.map((p) => ({
+      slug: slugFromPath(p.path),
+      title: p.title,
+      path: p.path,
+      sinceVersion: p.sinceVersion,
+      generated: isGeneratedPath(p.path),
+      siteAuthored: false,
+    }));
+    if (items.length) byArea.set(entry.area, [...(byArea.get(entry.area) ?? []), ...items]);
+  }
+
+  // Site-authored pages prepend within their area (so Get Started leads) —
+  // unless the canonical upstream page has shipped, in which case the
+  // placeholder retires itself and the bundle page takes over.
+  const bundlePaths = new Set(manifest.nav.flatMap((e) => e.pages.map((p) => p.path)));
+  for (const sp of sitePages) {
+    if (sp.supersededBy?.some((p) => bundlePaths.has(p))) continue;
+    const item: NavItem = {
+      slug: sp.slug,
+      title: sp.title,
+      path: sp.file,
+      generated: false,
+      siteAuthored: true,
+    };
+    byArea.set(sp.area, [item, ...(byArea.get(sp.area) ?? [])]);
+  }
+
+  const rank = (area: string) => {
+    const i = AREA_ORDER.indexOf(area);
+    return i === -1 ? AREA_ORDER.length : i;
+  };
+
+  return [...byArea.keys()]
+    .sort((a, b) => rank(a) - rank(b))
+    .map((area) => ({ area, title: areaTitle(area), items: byArea.get(area)! }))
+    .filter((s) => s.items.length > 0);
+}
+
+export function flattenNav(sections: NavSection[]): NavItem[] {
+  return sections.flatMap((s) => s.items);
+}
+
+export function adjacentInNav(
+  sections: NavSection[],
+  slug: string,
+): { prev?: NavItem; next?: NavItem } {
+  const flat = flattenNav(sections);
+  const i = flat.findIndex((d) => d.slug === slug);
   if (i === -1) return {};
-  return { prev: DOC_LIST[i - 1], next: DOC_LIST[i + 1] };
+  return { prev: flat[i - 1], next: flat[i + 1] };
 }
 
-export function sectionTitleFor(slug: string): string | undefined {
-  return DOC_SECTIONS.find((s) => s.items.some((i) => i.slug === slug))?.title;
+export function sectionTitleForSlug(sections: NavSection[], slug: string): string | undefined {
+  return sections.find((s) => s.items.some((i) => i.slug === slug))?.title;
 }
 
-export type TocEntry = { depth: 2 | 3; text: string; id: string };
+// ---------------------------------------------------------------------------
+// Markdown text helpers
+// ---------------------------------------------------------------------------
 
 export function slugify(text: string): string {
   return text
@@ -106,6 +218,11 @@ export function stripInlineMarkdown(s: string): string {
     .replace(/\*([^*]*)\*/g, "$1")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .trim();
+}
+
+// Remove YAML front-matter (the bundle stamps every doc with title/area/etc.).
+export function stripFrontmatter(raw: string): string {
+  return raw.replace(/^---\n[\s\S]*?\n---\n?/, "");
 }
 
 // Remove internal QA apparatus that should never appear on a public docs page:
@@ -141,4 +258,20 @@ export function extractToc(markdown: string): TocEntry[] {
     toc.push({ depth, text, id: slugify(text) });
   }
   return toc;
+}
+
+// First real paragraph after the H1 — used as a card blurb on the docs index.
+export function firstParagraph(markdown: string, max = 160): string {
+  const body = markdown.replace(/^#\s+[^\n]*\n+/, "");
+  const lines = body.split("\n");
+  let inFence = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (/^(```|~~~)/.test(line)) inFence = !inFence;
+    if (inFence || !line) continue;
+    if (/^(#|>|[-*]|\d+\.|\||!\[|<)/.test(line)) continue;
+    const text = stripInlineMarkdown(line);
+    return text.length > max ? `${text.slice(0, max).replace(/\s+\S*$/, "")}…` : text;
+  }
+  return "";
 }

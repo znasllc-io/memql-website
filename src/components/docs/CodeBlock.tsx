@@ -19,6 +19,9 @@ function CodeBlockImpl({ code, lang }: { code: string; lang?: string }) {
   const [copied, setCopied] = useState(false);
   const normalized = normalizeLang(lang);
   const label = LABELS[normalized] ?? normalized;
+  // Plain-text fences are where box-drawing diagrams live; the airy 1.7
+  // line-height pulls the box halves apart, so tighten the grid for them.
+  const isText = normalized === "text";
 
   const lines = useMemo(() => {
     const src = code.replace(/\n+$/, "");
@@ -53,7 +56,7 @@ function CodeBlockImpl({ code, lang }: { code: string; lang?: string }) {
           {copied ? "copied" : "copy"}
         </button>
       </div>
-      <pre className="overflow-x-auto px-5 py-4 font-mono text-[12.5px] leading-[1.7]">
+      <pre className={`overflow-x-auto px-5 py-4 font-mono text-[12.5px] ${isText ? "leading-[1.25]" : "leading-[1.7]"}`}>
         <code className="block">
           {lines.map((tokens, i) => (
             <div key={i}>

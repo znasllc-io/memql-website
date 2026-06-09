@@ -102,7 +102,7 @@ export default function AiHarnessPage() {
         <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent">// keep reading</div>
         <ul className="mt-3 space-y-2 text-[15.5px] text-fg-dim">
           <li>
-            <Link href="/docs/memory" className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">
+            <Link href="/docs/latest/overview/why-memql-harness" className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">
               Memory &amp; the agent harness
             </Link>{" "}
             — how recall, consolidation, and the plan/step/observation loop work in MemQL.

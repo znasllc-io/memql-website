@@ -3,20 +3,28 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { DOC_SECTIONS } from "@/lib/docs-nav";
+import type { NavSection } from "@/lib/docs-nav";
 
-function NavList({ onNavigate }: { onNavigate?: () => void }) {
+function NavList({
+  sections,
+  versionLabel,
+  onNavigate,
+}: {
+  sections: NavSection[];
+  versionLabel: string;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   return (
     <nav aria-label="Documentation" className="flex flex-col gap-7">
-      {DOC_SECTIONS.map((section) => (
-        <div key={section.title}>
+      {sections.map((section) => (
+        <div key={section.area}>
           <div className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-dim">
             {section.title}
           </div>
           <ul className="flex flex-col gap-0.5 border-l border-border">
             {section.items.map((item) => {
-              const href = `/docs/${item.slug}`;
+              const href = `/docs/${versionLabel}/${item.slug}`;
               const active = pathname === href;
               return (
                 <li key={item.slug}>
@@ -24,13 +32,29 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
                     href={href}
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
-                    className={`-ml-px block border-l-2 py-1.5 pl-4 text-[14px] leading-snug transition-colors ${
+                    className={`-ml-px flex items-center gap-2 border-l-2 py-1.5 pl-4 text-[14px] leading-snug transition-colors ${
                       active
                         ? "border-accent font-medium text-accent"
                         : "border-transparent text-muted hover:border-border-strong hover:text-fg"
                     }`}
                   >
-                    {item.title}
+                    <span className="min-w-0 flex-1">{item.title}</span>
+                    {item.generated && (
+                      <span
+                        title="Generated from the engine — not hand-edited"
+                        className="shrink-0 rounded-sm border border-border px-1 font-mono text-[9px] uppercase tracking-wider text-dim"
+                      >
+                        gen
+                      </span>
+                    )}
+                    {item.siteAuthored && (
+                      <span
+                        title="Written for this site — pending an upstream version"
+                        className="shrink-0 rounded-sm border border-amber-500/40 px-1 font-mono text-[9px] uppercase tracking-wider text-amber-500/80"
+                      >
+                        site
+                      </span>
+                    )}
                   </Link>
                 </li>
               );
@@ -42,7 +66,13 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export default function DocsSidebar() {
+export default function DocsSidebar({
+  sections,
+  versionLabel,
+}: {
+  sections: NavSection[];
+  versionLabel: string;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -68,7 +98,7 @@ export default function DocsSidebar() {
     <>
       {/* desktop rail */}
       <aside className="sticky top-24 hidden h-[calc(100vh-7rem)] w-60 shrink-0 overflow-y-auto pb-12 pr-4 lg:block">
-        <NavList />
+        <NavList sections={sections} versionLabel={versionLabel} />
       </aside>
 
       {/* mobile trigger */}
@@ -104,7 +134,7 @@ export default function DocsSidebar() {
                 ✕
               </button>
             </div>
-            <NavList onNavigate={() => setOpen(false)} />
+            <NavList sections={sections} versionLabel={versionLabel} onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}

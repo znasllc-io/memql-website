@@ -1,0 +1,256 @@
+{
+  "version": "0.9.30",
+  "engineVersion": "0.9.6",
+  "pageCount": 42,
+  "areas": [
+    "overview",
+    "concepts",
+    "language",
+    "ai",
+    "build",
+    "operate",
+    "cockpit"
+  ],
+  "nav": [
+    {
+      "area": "overview",
+      "pages": [
+        {
+          "path": "overview/quickstart.md",
+          "title": "memQL Quick Start",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "overview/tech-stack.md",
+          "title": "memQL Tech Stack & Deployment Practices",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "overview/vs-other-harnesses.md",
+          "title": "memQL vs. Other Harnesses",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "overview/why-memql-harness.md",
+          "title": "Why memQL Is a Harness, Not a Library",
+          "sinceVersion": "0.9.0"
+        }
+      ]
+    },
+    {
+      "area": "concepts",
+      "pages": [
+        {
+          "path": "concepts/architecture.md",
+          "title": "MemQL Engine Architecture",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "concepts/concept-seeding.md",
+          "title": "Concept Seeding",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "concepts/concept-versioning.md",
+          "title": "Concept ID Versioning",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "concepts/data-validation.md",
+          "title": "Data Validation Lifecycle",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "concepts/events.md",
+          "title": "MemQL Events System",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "concepts/identifiers.md",
+          "title": "Node Identifier Conventions",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "concepts/permissions-and-access-control.md",
+          "title": "Permissions and Access Control",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "concepts/tool-knowledge-domain-pattern.md",
+          "title": "Tool \u2194 Knowledge Domain Pattern",
+          "sinceVersion": "0.9.0"
+        }
+      ]
+    },
+    {
+      "area": "language",
+      "pages": [
+        {
+          "path": "language/attribute-matrix.md",
+          "title": "MemQL Attribute Matrix",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "language/authoring-rules.md",
+          "title": "MemQL Authoring Rules & Gotchas",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "language/functions.md",
+          "title": "MemQL Function Language Specification",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "language/memql.md",
+          "title": "MemQL",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "language/naming-conventions.md",
+          "title": "MemQL Naming Conventions",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "language/reserved.md",
+          "title": "MemQL Reserved Names",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "language/specifications.md",
+          "title": "MemQL Specifications",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "reference/_generated/concepts.md",
+          "title": "Concept Catalog",
+          "sinceVersion": "0.9.0"
+        }
+      ]
+    },
+    {
+      "area": "ai",
+      "pages": [
+        {
+          "path": "ai/llm-cost-control.md",
+          "title": "LLM cost control \u2014 defense in depth",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "ai/operator-capabilities.md",
+          "title": "MemQL Operator Capabilities",
+          "sinceVersion": "0.9.0"
+        }
+      ]
+    },
+    {
+      "area": "build",
+      "pages": [
+        {
+          "path": "build/audio-streaming.md",
+          "title": "Audio Streaming Architecture",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "build/build-tags.md",
+          "title": "Build Tags -- Node Type Binaries",
+          "sinceVersion": "0.9.0"
+        }
+      ]
+    },
+    {
+      "area": "operate",
+      "pages": [
+        {
+          "path": "operate/auth/access-model.md",
+          "title": "Access Model",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/auth/actor-envelope.md",
+          "title": "Actor envelope contract",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/auth/identity-service.md",
+          "title": "Identity Service (Operator Guide)",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/auth/node-jwt.md",
+          "title": "Node service-account JWTs",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/auth/per-row-authz-audit.md",
+          "title": "Per-row authorization audit",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/auth/service-account-jwt.md",
+          "title": "Service-account JWTs (machine identity)",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/auth/user-provisioning.md",
+          "title": "User Provisioning",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/auth/voice-agent-jwt.md",
+          "title": "Voice-agent service-account JWTs",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/database-setup.md",
+          "title": "Database Setup",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/deployment-console.md",
+          "title": "memQL Deployment Console -- Operator Guide",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/deployment-strategy.md",
+          "title": "memQL + CoPresent Deployment Strategy (AKS)",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/env-vars.md",
+          "title": "Environment Variables -- memQL",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/infrastructure.md",
+          "title": "Infrastructure Management Guide",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/livekit-provision.md",
+          "title": "Self-hosted LiveKit (staging/prod) \u2014 provisioning runbook",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/voice-bringup-verification.md",
+          "title": "Voice-agent bring-up verification",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/voice-eou-tuning.md",
+          "title": "Voice end-of-utterance (EOU) tuning",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/workbench-runbook.md",
+          "title": "Workbench Runbook",
+          "sinceVersion": "0.9.0"
+        },
+        {
+          "path": "operate/workers-runbook.md",
+          "title": "Workers \u2014 Operations Runbook",
+          "sinceVersion": "0.9.0"
+        }
+      ]
+    }
+  ]
+}

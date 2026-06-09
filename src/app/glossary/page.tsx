@@ -44,7 +44,7 @@ const TERMS: Term[] = [
   },
   {
     term: "Episodic vs. semantic memory",
-    body: <>Episodic memory is the raw log of what happened (this step ran, this tool returned that). Semantic memory is what&rsquo;s generally true, distilled from many episodes (&ldquo;this approach usually fails here&rdquo;). MemQL&rsquo;s <Link href="/docs/memory" className="text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">consolidation</Link> turns episodic memory into semantic memory on a schedule.</>,
+    body: <>Episodic memory is the raw log of what happened (this step ran, this tool returned that). Semantic memory is what&rsquo;s generally true, distilled from many episodes (&ldquo;this approach usually fails here&rdquo;). MemQL&rsquo;s <Link href="/docs/latest/overview/why-memql-harness" className="text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">consolidation</Link> turns episodic memory into semantic memory on a schedule.</>,
   },
   {
     term: "recall()",
