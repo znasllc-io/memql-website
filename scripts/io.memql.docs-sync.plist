@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Template LaunchAgent for the local docs-sync (every 8h).
+     Install:
+       cp "scripts/io.memql.docs-sync.plist" ~/Library/LaunchAgents/
+       launchctl load ~/Library/LaunchAgents/io.memql.docs-sync.plist
+     Uninstall / turn off:
+       launchctl unload ~/Library/LaunchAgents/io.memql.docs-sync.plist
+       rm ~/Library/LaunchAgents/io.memql.docs-sync.plist
+     Run once now (without waiting 8h):
+       launchctl start io.memql.docs-sync
+     Watch it:
+       tail -f ".docs-sync.log" -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.memql.docs-sync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/jmendivil/MemQL Website/scripts/docs-sync.sh</string>
+    </array>
+
+    <!-- Every 8 hours (28800s). launchd coalesces runs missed while asleep. -->
+    <key>StartInterval</key>
+    <integer>28800</integer>
+
+    <!-- Run once when loaded, so you see it work immediately. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/jmendivil/MemQL Website/.docs-sync.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jmendivil/MemQL Website/.docs-sync.log</string>
+</dict>
+</plist>

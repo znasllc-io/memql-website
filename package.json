@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "docs:sync": "node scripts/fetch-docs-bundle.mjs",
     "prebuild": "node scripts/fetch-stars.mjs",
     "build": "next build",
     "start": "next start",
