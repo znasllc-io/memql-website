@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import CockpitConsole from "@/components/CockpitConsole";
-import { MarketingHeader, MarketingFooter } from "@/components/seo/MarketingShell";
+import ThemeToggle from "@/components/ThemeToggle";
+import { NeuronLink } from "@/components/Transition";
+import { MarketingFooter } from "@/components/seo/MarketingShell";
 
 export const metadata: Metadata = {
   title: "MemQL Cockpit — terminal IDE & ops console for MemQL clusters",
@@ -34,7 +36,27 @@ const TABS: [string, string][] = [
 export default function CockpitPage() {
   return (
     <>
-      <MarketingHeader />
+      {/* Minimal header for the Cockpit page — only MemQL (home) + Cockpit. */}
+      <header className="fixed inset-x-0 top-4 z-50 mx-auto flex w-full max-w-[1180px] items-center gap-3 px-4">
+        <nav
+          aria-label="Primary"
+          className="flex flex-1 items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md"
+        >
+          <NeuronLink href="/" aria-label="MemQL — home" className="flex items-center gap-2.5">
+            <Image src="/memql-mark.png" alt="" width={30} height={30} priority className="h-[30px] w-[30px] object-contain" />
+            <span className="font-display text-[21px] leading-none tracking-wide text-fg">
+              MemQL<span className="text-accent">.</span>
+            </span>
+          </NeuronLink>
+          <NeuronLink href="/" aria-label="Back to the main page" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+            <span className="font-display text-[18px] leading-none tracking-wide text-fg">
+              Cockpit<span className="text-accent">.</span>
+            </span>
+            <Image src="/memql-mark.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
+          </NeuronLink>
+        </nav>
+        <ThemeToggle />
+      </header>
       <main>
         <section className="cockpit-band relative overflow-hidden border-b border-border">
           <div className="relative mx-auto max-w-[1360px] px-6 pt-28 pb-24 sm:px-8">
