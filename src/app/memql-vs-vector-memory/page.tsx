@@ -5,11 +5,11 @@ import MarketingShell from "@/components/seo/MarketingShell";
 export const metadata: Metadata = {
   title: "MemQL vs. Vector Memory for AI Agents — MemQL",
   description:
-    "How MemQL's append-only, time-series graph memory compares to vector / embed-and-retrieve agent memory (Mem0-style): time-awareness, relationships, provenance, and queryability — and when to use which.",
+    "How MemQL's append-only, time-series graph memory compares to vector / embed-and-retrieve agent memory (Mem0-style). MemQL includes vector similarity too (the similar() DSL construct) — plus time-awareness, relationships, provenance, and queryability. When to use which.",
   alternates: { canonical: "/memql-vs-vector-memory" },
   openGraph: {
     title: "MemQL vs. Vector Memory for AI Agents",
-    description: "Append-only, time-series graph memory vs. embed-and-retrieve. An honest comparison.",
+    description: "Append-only, time-series graph memory — with built-in vector similarity. An honest comparison vs. embed-and-retrieve.",
     url: "/memql-vs-vector-memory",
     type: "article",
   },
@@ -19,7 +19,12 @@ const ROWS: { dim: string; vector: string; memql: string }[] = [
   {
     dim: "Storage model",
     vector: "Embeddings in a vector index; memories are points in similarity space.",
-    memql: "Append-only, time-series graph rows on PostgreSQL + TimescaleDB; memories are versioned records with relationships.",
+    memql: "Append-only, time-series graph rows on PostgreSQL + TimescaleDB — with embeddings stored alongside (pgvector). Memories are versioned records with relationships.",
+  },
+  {
+    dim: "Vector / similarity search",
+    vector: "The whole product — nearest-neighbour over embeddings is all it does.",
+    memql: "Built in, not given up: the similar() DSL construct ranks rows by vector similarity (pgvector). It's one capability on the same data, not a separate store.",
   },
   {
     dim: "Time-awareness",
@@ -29,7 +34,7 @@ const ROWS: { dim: string; vector: string; memql: string }[] = [
   {
     dim: "Retrieval",
     vector: "Pure semantic similarity (nearest-neighbour) over embeddings.",
-    memql: "recall() blends recency × relevance in one query (pgvector similarity + exponential time-decay), plus exact DSL queries.",
+    memql: "similar() for vector similarity, recall() to blend similarity × recency (time-decay) in one query, and exact DSL queries — your pick per call.",
   },
   {
     dim: "Relationships",
@@ -65,9 +70,13 @@ export default function ComparisonPage() {
         <strong className="font-semibold text-fg">vector memory</strong> — embed everything and retrieve
         by similarity (the Mem0 / vector-store approach). The other is what{" "}
         <Link href="/" className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">MemQL</Link>{" "}
-        does: an <strong className="font-semibold text-fg">append-only, time-series graph</strong> that
-        treats memory and an agent&rsquo;s working state as the same queryable data. They are good at
-        different things.
+        does: an <strong className="font-semibold text-fg">append-only, time-series graph</strong>{" "}that
+        treats memory and an agent&rsquo;s working state as the same queryable data. The key thing to
+        know up front: this isn&rsquo;t vectors <em>or</em> a graph. MemQL{" "}
+        <strong className="font-semibold text-fg">includes vector similarity</strong> — the{" "}
+        <code className="font-mono text-[0.9em] text-fg-dim">similar()</code>{" "}construct does embedding
+        search over the same data — so choosing MemQL doesn&rsquo;t mean giving up embed-and-retrieve;
+        it means getting it <em>plus</em> time, relationships, provenance, and working state.
       </p>
 
       <div className="mt-10 overflow-x-auto rounded-lg border border-border">
@@ -102,8 +111,9 @@ export default function ComparisonPage() {
         <strong className="font-semibold text-fg">Reach for MemQL</strong> when an agent needs to{" "}
         <em>behave</em> like it has memory: resume tasks, remember what it tried, reason over time
         (&ldquo;what changed since yesterday?&rdquo;), follow relationships, and let you inspect and replay
-        exactly what it did. MemQL still does semantic retrieval (it uses embeddings under the hood) — it
-        just isn&rsquo;t <em>only</em> that. It&rsquo;s the memory and state layer for the whole{" "}
+        exactly what it did. And you don&rsquo;t trade away vector search to get there: MemQL does
+        embedding similarity natively via <code className="font-mono text-[0.9em] text-fg-dim">similar()</code>{" "}&mdash;
+        it just isn&rsquo;t <em>only</em> that. It&rsquo;s the memory and state layer for the whole{" "}
         <Link href="/ai-harness" className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">agent harness</Link>.
       </p>
 
