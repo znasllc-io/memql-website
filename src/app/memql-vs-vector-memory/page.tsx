@@ -24,7 +24,7 @@ const ROWS: { dim: string; vector: string; memql: string }[] = [
   {
     dim: "Vector / similarity search",
     vector: "The whole product — nearest-neighbour over embeddings is all it does.",
-    memql: "Built in, not given up: the similar() DSL construct ranks rows by vector similarity (pgvector). It's one capability on the same data, not a separate store.",
+    memql: "Built in, not given up: the similar() DSL construct ranks rows by vector similarity (pgvector), and knowledge domains do classic chunk-embed-retrieve RAG — all on the same engine, not a separate store.",
   },
   {
     dim: "Time-awareness",
@@ -35,6 +35,11 @@ const ROWS: { dim: string; vector: string; memql: string }[] = [
     dim: "Retrieval",
     vector: "Pure semantic similarity (nearest-neighbour) over embeddings.",
     memql: "similar() for vector similarity, recall() to blend similarity × recency (time-decay) in one query, and exact DSL queries — your pick per call.",
+  },
+  {
+    dim: "Consolidation",
+    vector: "None — raw chunks accumulate; nothing distills or expires on its own.",
+    memql: "Episodic rows consolidate into durable semantic knowledge on a schedule, so memory distills instead of just piling up.",
   },
   {
     dim: "Relationships",
@@ -49,12 +54,17 @@ const ROWS: { dim: string; vector: string; memql: string }[] = [
   {
     dim: "History & provenance",
     vector: "Typically overwrite/replace; little built-in history.",
-    memql: "Append-only: nothing is edited in place, so every version and who wrote it is preserved and inspectable.",
+    memql: "Append-only: nothing is edited in place, so every version and author is preserved — and you can ask what was true at any point in time (asOf), then replay it.",
   },
   {
     dim: "Queryability",
     vector: "Vector search + metadata filters.",
     memql: "A full DSL — queries, mutations, automations, policies — over the same memory.",
+  },
+  {
+    dim: "Isolation & access control",
+    vector: "You build it — namespaces and any auth live in your app around the store.",
+    memql: "Multi-tenant by partition, with per-row authorization built in (test-enforced).",
   },
 ];
 
@@ -104,8 +114,8 @@ export default function ComparisonPage() {
       <p className="mt-4 text-[16px] leading-[1.7] text-fg-dim">
         <strong className="font-semibold text-fg">Reach for vector memory</strong> when the job is
         semantic search over a pile of documents or past messages — &ldquo;find me things like this&rdquo; —
-        and you don&rsquo;t need time, relationships, or durable task state. It&rsquo;s simple and great
-        at that one thing.
+        and you don&rsquo;t need time, relationships, or durable task state. It&rsquo;s simple, lighter to
+        run (a library, no database), and great at that one thing.
       </p>
       <p className="mt-4 text-[16px] leading-[1.7] text-fg-dim">
         <strong className="font-semibold text-fg">Reach for MemQL</strong> when an agent needs to{" "}
