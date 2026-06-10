@@ -47,7 +47,7 @@ export default function DocsHeader({
               MemQL<span className="text-accent">.</span>
             </span>
           </NeuronLink>
-          <span className="font-mono text-[12px] tracking-wide text-dim">/ docs</span>
+          <span className="hidden font-mono text-[12px] tracking-wide text-dim sm:inline">/ docs</span>
 
           {/* version dropdown */}
           <div className="relative ml-1">
@@ -76,7 +76,7 @@ export default function DocsHeader({
         <div className="flex items-center gap-5">
           <NeuronLink
             href="/cockpit"
-            className="font-mono text-[12px] uppercase tracking-wider text-muted transition-colors hover:text-fg"
+            className="hidden font-mono text-[12px] uppercase tracking-wider text-muted transition-colors hover:text-fg sm:inline"
           >
             cockpit
           </NeuronLink>
