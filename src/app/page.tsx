@@ -4,9 +4,9 @@ import Image from "next/image";
 import { useState, useRef, useCallback, useEffect } from "react";
 import HeroGraph from "@/components/HeroGraph";
 import AgentLoopGraph from "@/components/AgentLoopGraph";
-import CockpitConsole from "@/components/CockpitConsole";
 import ThemeToggle from "@/components/ThemeToggle";
 import DocsFab from "@/components/DocsFab";
+import GithubFab from "@/components/GithubFab";
 import { NeuronLink } from "@/components/Transition";
 import { GH_REPO, GH_STARS } from "@/lib/stars";
 
@@ -41,64 +41,75 @@ export default function Home() {
         <Hero />
         <StackStrip />
         <Harness />
-        <Cockpit />
         <CoPresent />
         <ForWhom />
         <Close />
         <Footer />
       </main>
       <DocsFab />
+      <GithubFab />
     </>
   );
 }
 
 /* ───────────────────────────── nav ───────────────────────────── */
 
+// In-page section nav (centered in the bar). Docs is a route; the rest are
+// anchors to the landing's sections.
+const NAV_SECTIONS: { href: string; label: string; route?: boolean }[] = [
+  { href: "/docs", label: "Docs", route: true },
+  { href: "#harness", label: "Harness" },
+  { href: "#copresent", label: "CoPresent" },
+  { href: "#who", label: "Who it's for" },
+  { href: "#project", label: "Project" },
+];
+
 function Nav() {
-  const stars = useGitHubStars();
   return (
     <header className="fixed inset-x-0 top-4 z-50 mx-auto flex w-full max-w-[1180px] items-center gap-3 px-4">
-      <nav aria-label="Primary" className="flex flex-1 items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md">
+      <nav aria-label="Primary" className="relative flex flex-1 items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md">
+        {/* left: home lockup */}
         <a href="#top" aria-label="MemQL — home" className="flex items-center gap-2.5">
           <Image src="/memql-mark.png" alt="" width={30} height={30} priority className="h-[30px] w-[30px] object-contain" />
           <span className="font-display text-[21px] leading-none tracking-wide text-fg">
             MemQL<span className="text-accent">.</span>
           </span>
         </a>
-        <div className="flex items-center gap-4">
-          <NeuronLink
-            href="/docs"
-            className="font-mono text-[12px] uppercase tracking-wider text-muted transition-colors hover:text-fg"
-          >
-            docs
-          </NeuronLink>
-          {stars > 0 && (
-            <a
-              href={`https://github.com/${GH_REPO}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${formatStars(stars)} GitHub stars`}
-              className="hidden items-center gap-1.5 font-mono text-[12px] text-muted hover:text-fg transition-colors sm:inline-flex"
-            >
-              <span aria-hidden="true" className="text-accent">★</span>
-              {formatStars(stars)}
-            </a>
+
+        {/* center: in-page section navigation */}
+        <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-5 lg:flex">
+          {NAV_SECTIONS.map((s) =>
+            s.route ? (
+              <NeuronLink
+                key={s.href}
+                href={s.href}
+                className="font-mono text-[12px] uppercase tracking-wider text-muted transition-colors hover:text-fg"
+              >
+                {s.label}
+              </NeuronLink>
+            ) : (
+              <a
+                key={s.href}
+                href={s.href}
+                className="font-mono text-[12px] uppercase tracking-wider text-muted transition-colors hover:text-fg"
+              >
+                {s.label}
+              </a>
+            ),
           )}
-          <div className="hidden sm:block">
-            <GithubMenu align="right" variant="nav" />
-          </div>
-          {/* Cockpit rendered as its own brand lockup (wordmark + mark), mirroring MemQL */}
-          <NeuronLink
-            href="/cockpit"
-            aria-label="MemQL Cockpit"
-            className="flex items-center gap-2 transition-opacity hover:opacity-80"
-          >
-            <span className="font-display text-[18px] leading-none tracking-wide text-fg">
-              Cockpit<span className="text-accent">.</span>
-            </span>
-            <Image src="/memql-mark.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
-          </NeuronLink>
         </div>
+
+        {/* right: Cockpit brand lockup -> dedicated page */}
+        <NeuronLink
+          href="/cockpit"
+          aria-label="MemQL Cockpit"
+          className="flex items-center gap-2 transition-opacity hover:opacity-80"
+        >
+          <span className="font-display text-[18px] leading-none tracking-wide text-fg">
+            Cockpit<span className="text-accent">.</span>
+          </span>
+          <Image src="/memql-mark.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
+        </NeuronLink>
       </nav>
       {/* theme toggle sits OUTSIDE the nav oval as its own control */}
       <ThemeToggle />
@@ -265,7 +276,7 @@ function Harness() {
     },
   ];
   return (
-    <Section eyebrow="the harness" index="01">
+    <Section eyebrow="the harness" index="01" id="harness">
       <Headline>What a production agent actually needs.</Headline>
       <Lede className="max-w-[44em]">
         An agent in a demo is a <Inline>while</Inline> loop around one model call. In production it has
@@ -327,38 +338,12 @@ function Harness() {
   );
 }
 
-/* ───────────────────────── the cockpit ───────────────────────── */
-
-function Cockpit() {
-  return (
-    <Section eyebrow="the cockpit" index="02">
-      <Headline>Drive it all from the Cockpit.</Headline>
-      <Lede className="max-w-[44em]">
-        The terminal-native IDE and ops console. Author concepts and tools, run and watch agents, inspect
-        the live cluster topology, and hold the safety spine &mdash; in one place. This is a faithful,
-        working reproduction. Click the tabs.
-      </Lede>
-
-      <Reveal delay={120} className="mt-12">
-        <CockpitConsole />
-      </Reveal>
-
-      <p className="mt-8 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
-        <span className="text-accent">// drive it</span> &middot; clusters &middot; chat &middot; concepts &middot; planner &middot; skills &middot; workers &middot; safety.{" "}
-        <NeuronLink href="/cockpit" className="text-accent underline decoration-accent/30 underline-offset-2 transition-colors hover:decoration-accent">
-          A tour of the Cockpit &rarr;
-        </NeuronLink>
-      </p>
-    </Section>
-  );
-}
-
 /* ───────────────────────── copresent ───────────────────────── */
 
 function CoPresent() {
   const tags = ["real-time voice", "video avatars", "shared canvas", "multi-agent", "releasing soon"];
   return (
-    <Section eyebrow="living proof" index="03" grid>
+    <Section eyebrow="living proof" index="02" id="copresent" grid>
       <Headline>It&rsquo;s real: CoPresent runs on it.</Headline>
       <Lede className="max-w-[46em]">
         Visionarys is building <span className="text-fg">CoPresent</span>{" "}&mdash; a multi-agent product
@@ -405,7 +390,7 @@ function ForWhom() {
     },
   ];
   return (
-    <Section eyebrow="who it's for" index="04">
+    <Section eyebrow="who it's for" index="03" id="who">
       <Headline>Three readers.</Headline>
       <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-3">
         {items.map((it, i) => (
@@ -423,10 +408,10 @@ function ForWhom() {
 
 function Close() {
   return (
-    <section id="project" className="relative overflow-hidden border-t border-border">
+    <section id="project" className="relative scroll-mt-24 overflow-hidden border-t border-border">
       <div className="hero-glow" />
       <div className="relative mx-auto max-w-[760px] px-8 py-32 text-center">
-        <Eyebrow center index="05">the project</Eyebrow>
+        <Eyebrow center index="04">the project</Eyebrow>
         <p className="mx-auto mt-8 max-w-[32em] font-serif text-[24px] leading-[1.45] text-fg sm:text-[28px]">
           memQL and the Cockpit are open source, Apache 2.0. Alpha.
         </p>
@@ -505,7 +490,7 @@ function Section({
 }) {
   const labelId = `section-eyebrow-${id ?? eyebrow.replace(/[^a-z0-9]/gi, "-")}`;
   return (
-    <section id={id} aria-labelledby={labelId} className="relative border-t border-border">
+    <section id={id} aria-labelledby={labelId} className="relative scroll-mt-24 border-t border-border">
       {grid && <div aria-hidden="true" className="bg-grid pointer-events-none absolute inset-0" />}
       <div className="relative mx-auto max-w-[1180px] px-8 py-28">
         <Eyebrow id={labelId} index={index}>{eyebrow}</Eyebrow>
@@ -656,7 +641,7 @@ function GithubMenu({
 function Eyebrow({ children, center = false, id, index }: { children: React.ReactNode; center?: boolean; id?: string; index?: string }) {
   return (
     <div id={id} className={`font-mono text-[11px] uppercase tracking-[0.22em] text-accent ${center ? "text-center" : ""}`}>
-      {index && <span className="text-dim">{index} / 05&nbsp;&nbsp;</span>}
+      {index && <span className="text-dim">{index} / 04&nbsp;&nbsp;</span>}
       {children}
     </div>
   );
