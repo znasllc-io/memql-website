@@ -108,7 +108,9 @@ export default function AgentLoopGraph({ onPhase }: { onPhase?: (phase: number) 
         { x: W * 0.60, y: H * 0.5 },
         { x: W * 0.72, y: H * 0.5 },
       ];
-      const cx = W * 0.90, cy = H * 0.5, rad = Math.min(W * 0.07, H * 0.34);
+      // On narrow canvases keep the memory cluster off the right edge so its
+      // "observation"/"memory" labels don't clip (W-56 leaves room for them).
+      const cx = Math.min(W * 0.90, W - 56), cy = H * 0.5, rad = Math.min(W * 0.07, H * 0.34);
       mem = Array.from({ length: 6 }, (_, i) => {
         const a = (i / 6) * Math.PI * 2 + 0.6;
         const rr = rad * (0.45 + ((i * 7) % 5) / 5 * 0.55);
@@ -151,7 +153,11 @@ export default function AgentLoopGraph({ onPhase }: { onPhase?: (phase: number) 
       ctx!.font = "10px ui-monospace, SFMono-Regular, Menlo, monospace";
       ctx!.textAlign = "center";
       ctx!.fillStyle = `rgba(${rgb}, ${a})`;
-      ctx!.fillText(text, x, y);
+      // Keep center-aligned text inside the canvas so labels never clip at the
+      // edges on narrow (mobile) widths.
+      const half = ctx!.measureText(text).width / 2 + 4;
+      const cx = Math.max(half, Math.min(width - half, x));
+      ctx!.fillText(text, cx, y);
     }
 
     function traceAmt(t: number, order: number): number {
