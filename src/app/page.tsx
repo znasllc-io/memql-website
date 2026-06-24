@@ -438,9 +438,10 @@ function Close() {
 function Footer() {
   return (
     <footer className="border-t border-border">
-      {/* extra bottom padding on mobile so the fixed FABs never cover the footer links;
-          tracks the safe-area inset so it stays clear above the phone's bottom system bar */}
-      <div className="mx-auto flex max-w-[1180px] flex-col items-start justify-between gap-4 px-8 pt-10 pb-[calc(env(safe-area-inset-bottom,0px)_+_7rem)] sm:flex-row sm:items-center sm:py-10">
+      {/* The FABs show below lg, so reserve bottom clearance until then (tracking the
+          safe-area inset so it clears the phone's bottom system bar). At lg the FABs are
+          hidden, so the footer returns to its normal padding. */}
+      <div className="mx-auto flex max-w-[1180px] flex-col items-start justify-between gap-4 px-8 pt-10 pb-[calc(env(safe-area-inset-bottom,0px)_+_7rem)] sm:flex-row sm:items-center lg:pb-10">
         <div className="flex items-center gap-2.5">
           <Image src="/memql-mark.png" alt="" width={24} height={24} className="h-6 w-6 object-contain opacity-90" />
           <span className="font-display text-[16px] tracking-wide text-muted">
