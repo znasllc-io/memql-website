@@ -89,7 +89,25 @@ export default function ComparisonPage() {
         it means getting it <em>plus</em> time, relationships, provenance, and working state.
       </p>
 
-      <div className="mt-10 overflow-x-auto rounded-lg border border-border">
+      {/* mobile: stacked cards so MemQL (the key column) is never clipped off-screen */}
+      <div className="mt-10 flex flex-col gap-4 sm:hidden">
+        {ROWS.map((r) => (
+          <div key={r.dim} className="rounded-lg border border-border bg-bg-elev/40 p-4">
+            <div className="text-[15px] font-medium text-fg">{r.dim}</div>
+            <div className="mt-3 border-t border-border pt-3">
+              <div className="font-mono text-[11px] uppercase tracking-wider text-muted">Vector memory</div>
+              <p className="mt-1.5 text-[14px] leading-[1.55] text-muted">{r.vector}</p>
+            </div>
+            <div className="mt-3 border-t border-border pt-3">
+              <div className="font-mono text-[11px] uppercase tracking-wider text-accent">MemQL</div>
+              <p className="mt-1.5 text-[14px] leading-[1.55] text-fg-dim">{r.memql}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* sm+ : full side-by-side comparison table */}
+      <div className="mt-10 hidden overflow-x-auto rounded-lg border border-border sm:block">
         <table className="w-full border-collapse text-left text-[14px]">
           <thead className="bg-bg-panel">
             <tr>
