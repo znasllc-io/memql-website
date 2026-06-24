@@ -37,22 +37,22 @@ export default function CockpitPage() {
   return (
     <>
       {/* Minimal header for the Cockpit page — only MemQL (home) + Cockpit. */}
-      <header className="fixed inset-x-0 top-4 z-50 mx-auto flex w-full max-w-[1180px] items-center gap-3 px-4">
+      <header className="fixed inset-x-0 top-4 z-50 mx-auto flex w-full max-w-[1180px] items-center gap-2 px-3 sm:gap-3 sm:px-4">
         <nav
           aria-label="Primary"
-          className="flex flex-1 items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md"
+          className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full border border-border bg-bg/70 px-4 py-3 backdrop-blur-md sm:px-5"
         >
-          <NeuronLink href="/" aria-label="MemQL — home" className="flex items-center gap-2.5">
-            <Image src="/memql-mark.png" alt="" width={30} height={30} priority className="h-[30px] w-[30px] object-contain" />
+          <NeuronLink href="/" aria-label="MemQL — home" className="flex min-w-0 items-center gap-2.5">
+            <Image src="/memql-mark.png" alt="" width={30} height={30} priority className="h-[30px] w-[30px] shrink-0 object-contain" />
             <span className="font-display text-[21px] leading-none tracking-wide text-fg">
               MemQL<span className="text-accent">.</span>
             </span>
           </NeuronLink>
-          <NeuronLink href="/" aria-label="Back to the main page" className="flex items-center gap-2 transition-opacity hover:opacity-80">
+          <NeuronLink href="/" aria-label="Back to the main page" className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80">
             <span className="font-display text-[18px] leading-none tracking-wide text-fg">
               Cockpit<span className="text-accent">.</span>
             </span>
-            <Image src="/memql-mark.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
+            <Image src="/memql-mark.png" alt="" width={22} height={22} className="hidden h-[22px] w-[22px] object-contain sm:block" />
           </NeuronLink>
         </nav>
         <ThemeToggle />

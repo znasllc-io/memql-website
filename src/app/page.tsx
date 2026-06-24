@@ -66,11 +66,11 @@ const NAV_SECTIONS: { href: string; label: string; route?: boolean }[] = [
 
 function Nav() {
   return (
-    <header className="fixed inset-x-0 top-4 z-50 mx-auto flex w-full max-w-[1180px] items-center gap-3 px-4">
-      <nav aria-label="Primary" className="relative flex flex-1 items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md">
+    <header className="fixed inset-x-0 top-4 z-50 mx-auto flex w-full max-w-[1180px] items-center gap-2 px-3 sm:gap-3 sm:px-4">
+      <nav aria-label="Primary" className="relative flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full border border-border bg-bg/70 px-4 py-3 backdrop-blur-md sm:px-5">
         {/* left: home lockup */}
-        <a href="#top" aria-label="MemQL — home" className="flex items-center gap-2.5">
-          <Image src="/memql-mark.png" alt="" width={30} height={30} priority className="h-[30px] w-[30px] object-contain" />
+        <a href="#top" aria-label="MemQL — home" className="flex min-w-0 items-center gap-2.5">
+          <Image src="/memql-mark.png" alt="" width={30} height={30} priority className="h-[30px] w-[30px] shrink-0 object-contain" />
           <span className="font-display text-[21px] leading-none tracking-wide text-fg">
             MemQL<span className="text-accent">.</span>
           </span>
@@ -103,12 +103,12 @@ function Nav() {
         <NeuronLink
           href="/cockpit"
           aria-label="MemQL Cockpit"
-          className="flex items-center gap-2 transition-opacity hover:opacity-80"
+          className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-80"
         >
           <span className="font-display text-[18px] leading-none tracking-wide text-fg">
             Cockpit<span className="text-accent">.</span>
           </span>
-          <Image src="/memql-mark.png" alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
+          <Image src="/memql-mark.png" alt="" width={22} height={22} className="hidden h-[22px] w-[22px] object-contain sm:block" />
         </NeuronLink>
       </nav>
       {/* theme toggle sits OUTSIDE the nav oval as its own control */}
@@ -438,7 +438,9 @@ function Close() {
 function Footer() {
   return (
     <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-[1180px] flex-col items-start justify-between gap-4 px-8 py-10 sm:flex-row sm:items-center">
+      {/* extra bottom padding on mobile so the fixed FABs never cover the footer links;
+          tracks the safe-area inset so it stays clear above the phone's bottom system bar */}
+      <div className="mx-auto flex max-w-[1180px] flex-col items-start justify-between gap-4 px-8 pt-10 pb-[calc(env(safe-area-inset-bottom,0px)_+_7rem)] sm:flex-row sm:items-center sm:py-10">
         <div className="flex items-center gap-2.5">
           <Image src="/memql-mark.png" alt="" width={24} height={24} className="h-6 w-6 object-contain opacity-90" />
           <span className="font-display text-[16px] tracking-wide text-muted">

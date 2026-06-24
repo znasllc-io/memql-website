@@ -35,27 +35,27 @@ export default function DocsHeader({
   }
 
   return (
-    <header className="fixed inset-x-0 top-4 z-50 mx-auto flex w-full max-w-[1400px] items-center gap-3 px-5">
+    <header className="fixed inset-x-0 top-4 z-50 mx-auto flex w-full max-w-[1400px] items-center gap-2 px-3 sm:gap-3 sm:px-5">
       <nav
         aria-label="Docs"
-        className="flex flex-1 items-center justify-between rounded-full border border-border bg-bg/70 px-5 py-3 backdrop-blur-md"
+        className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-full border border-border bg-bg/70 px-4 py-3 backdrop-blur-md sm:px-5"
       >
-        <div className="flex items-center gap-2.5">
-          <NeuronLink href="/" aria-label="MemQL — home" className="flex items-center gap-2.5">
-            <Image src="/memql-mark.png" alt="" width={28} height={28} priority className="h-7 w-7 object-contain" />
-            <span className="font-display text-[20px] leading-none tracking-wide text-fg">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+          <NeuronLink href="/" aria-label="MemQL — home" className="flex shrink-0 items-center gap-2.5">
+            <Image src="/memql-mark.png" alt="" width={28} height={28} priority className="h-7 w-7 shrink-0 object-contain" />
+            <span className="hidden font-display text-[20px] leading-none tracking-wide text-fg min-[380px]:inline">
               MemQL<span className="text-accent">.</span>
             </span>
           </NeuronLink>
           <span className="hidden font-mono text-[12px] tracking-wide text-dim sm:inline">/ docs</span>
 
           {/* version dropdown */}
-          <div className="relative ml-1">
+          <div className="relative ml-1 min-w-0">
             <select
               aria-label="Documentation version"
               value={versionLabel}
               onChange={(e) => switchVersion(e.target.value)}
-              className="cursor-pointer appearance-none rounded-full border border-border bg-bg-elev/60 py-1 pl-2.5 pr-6 font-mono text-[11px] text-muted transition-colors hover:border-border-strong hover:text-fg focus:outline-none focus:ring-1 focus:ring-accent"
+              className="w-full cursor-pointer appearance-none rounded-full border border-border bg-bg-elev/60 py-1 pl-2.5 pr-6 font-mono text-[11px] text-muted transition-colors hover:border-border-strong hover:text-fg focus:outline-none focus:ring-1 focus:ring-accent"
             >
               <option value="latest">latest ({latest})</option>
               {versions.map((v) => (

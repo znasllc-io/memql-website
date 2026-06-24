@@ -154,6 +154,10 @@ export const viewport: Viewport = {
   colorScheme: "dark light",
   width: "device-width",
   initialScale: 1,
+  // Extend the canvas edge-to-edge so env(safe-area-inset-*) reports real
+  // values — lets the fixed FABs lift above the phone's bottom system/gesture
+  // bar instead of hiding under it.
+  viewportFit: "cover",
 };
 
 // Runs before first paint to set the theme class — no flash of wrong theme.

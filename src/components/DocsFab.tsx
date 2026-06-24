@@ -11,7 +11,7 @@ export default function DocsFab() {
     <NeuronLink
       href="/docs"
       aria-label="Open the documentation"
-      className="docs-fab group fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-accent-bright px-5 py-3 font-mono text-[13px] tracking-wide text-bg shadow-lg transition-transform hover:scale-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg sm:bottom-6 sm:right-6"
+      className="docs-fab group fixed right-5 z-50 inline-flex items-center gap-2 rounded-full bg-accent-bright px-5 py-3 font-mono text-[13px] tracking-wide text-bg shadow-lg transition-transform hover:scale-[1.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg bottom-[calc(env(safe-area-inset-bottom,0px)_+_2rem)] sm:right-6"
     >
       <svg
         aria-hidden="true"

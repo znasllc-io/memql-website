@@ -105,7 +105,7 @@ export default function DocsSidebar({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 left-5 z-40 inline-flex items-center gap-2 rounded-full border border-border bg-bg-elev px-4 py-2.5 font-mono text-[12px] text-fg shadow-lg backdrop-blur-md lg:hidden"
+        className="fixed left-5 z-40 inline-flex items-center gap-2 rounded-full border border-border bg-bg-elev px-4 py-2.5 font-mono text-[12px] text-fg shadow-lg backdrop-blur-md bottom-[calc(env(safe-area-inset-bottom,0px)_+_2rem)] lg:hidden"
         aria-label="Open documentation menu"
         aria-expanded={open}
       >
