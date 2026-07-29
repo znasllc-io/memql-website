@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Template LaunchAgent for the local docs-sync (every 8h).
-     Install:
+<!-- LaunchAgent for the local docs-sync (daily). Builds any new engine release's
+     docs bundle from its tag and lands it UNCOMMITTED for your review.
+     Install / reinstall:
        cp "scripts/io.memql.docs-sync.plist" ~/Library/LaunchAgents/
-       launchctl load ~/Library/LaunchAgents/io.memql.docs-sync.plist
-     Uninstall / turn off:
-       launchctl unload ~/Library/LaunchAgents/io.memql.docs-sync.plist
-       rm ~/Library/LaunchAgents/io.memql.docs-sync.plist
-     Run once now (without waiting 8h):
+       launchctl unload ~/Library/LaunchAgents/io.memql.docs-sync.plist 2>/dev/null
+       launchctl load   ~/Library/LaunchAgents/io.memql.docs-sync.plist
+     Run once now (without waiting for the schedule):
        launchctl start io.memql.docs-sync
+     Turn off:
+       launchctl unload ~/Library/LaunchAgents/io.memql.docs-sync.plist
      Watch it:
-       tail -f ".docs-sync.log" -->
+       tail -f ~/Library/Logs/memql-docs-autosync.log -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -22,17 +23,32 @@
         <string>/Users/jmendivil/MemQL Website/scripts/docs-sync.sh</string>
     </array>
 
-    <!-- Every 8 hours (28800s). launchd coalesces runs missed while asleep. -->
-    <key>StartInterval</key>
-    <integer>28800</integer>
+    <!-- Daily at 06:30 local. launchd coalesces a run missed while asleep. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>6</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
 
-    <!-- Run once when loaded, so you see it work immediately. -->
+    <!-- Also run once when loaded (login), so it self-heals promptly. -->
     <key>RunAtLoad</key>
     <true/>
 
+    <key>WorkingDirectory</key>
+    <string>/Users/jmendivil/MemQL Website</string>
+
+    <!-- Belt-and-suspenders PATH; docs-sync.sh also sets its own. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/go/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
     <key>StandardOutPath</key>
-    <string>/Users/jmendivil/MemQL Website/.docs-sync.log</string>
+    <string>/Users/jmendivil/Library/Logs/memql-docs-autosync.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/jmendivil/MemQL Website/.docs-sync.log</string>
+    <string>/Users/jmendivil/Library/Logs/memql-docs-autosync.log</string>
 </dict>
 </plist>
