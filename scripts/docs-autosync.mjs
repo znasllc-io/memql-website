@@ -41,10 +41,20 @@ const VERSIONS_FILE = join(CONTENT_DIR, "versions.json");
 
 const REPO = process.env.DOCS_ENGINE_REPO || "znasllc-io/memql";
 const FLOOR = process.env.DOCS_AUTOSYNC_FLOOR || "0.12.0";
-const FORCE = (process.env.DOCS_AUTOSYNC_FORCE || "").split(",").map((s) => s.trim()).filter(Boolean);
+// Engine release tags come in two spellings: 0.14.0 and earlier are bare,
+// v0.15.0 (2026-08-07) added a `v` prefix. Both are real releases. The prefix is
+// stripped for every identity purpose -- the registry, the content directory,
+// and the docs-<version>.tgz asset name all stay bare, so 0.15.0 sits next to
+// 0.14.0 instead of forking a parallel `v` series. Only git and the GitHub
+// release API see the original tag, and that travels separately as `ref`.
+//
+// The bare-only filter here is why v0.15.0 was invisible to this job.
+const SEMVER = /^v?\d+\.\d+\.\d+$/;
+const bare = (t) => t.replace(/^v/, "");
+
+const FORCE = (process.env.DOCS_AUTOSYNC_FORCE || "").split(",").map((s) => bare(s.trim())).filter(Boolean);
 const CACHE = join(process.env.XDG_CACHE_HOME || join(homedir(), ".cache"), "memql-docs-autosync");
 const ENGINE_DIR = join(CACHE, "engine");
-const SEMVER = /^\d+\.\d+\.\d+$/;
 
 const run = (cmd, args, opts = {}) =>
   exec(cmd, args, { maxBuffer: 64 * 1024 * 1024, ...opts });
@@ -74,12 +84,25 @@ async function registerVersion(version, engineVersion) {
   await writeFile(VERSIONS_FILE, `${JSON.stringify(reg, null, 2)}\n`, "utf8");
 }
 
+// Returns [{ ref, version }] -- `ref` is the tag as git/GitHub know it
+// (0.14.0 or v0.15.0), `version` is the bare X.Y.Z everything else keys on.
+// Deduped by version so a repo carrying both spellings of one release imports
+// it once rather than twice into the same content directory.
 async function listEngineReleaseTags() {
   // gh api --paginate concatenates the array pages into one JSON array.
   const { stdout } = await run("gh", [
     "api", "--paginate", `/repos/${REPO}/tags?per_page=100`, "-q", ".[].name",
   ]);
-  return stdout.split("\n").map((s) => s.trim()).filter((s) => SEMVER.test(s));
+  const seen = new Set();
+  const out = [];
+  for (const ref of stdout.split("\n").map((s) => s.trim())) {
+    if (!SEMVER.test(ref)) continue;
+    const version = bare(ref);
+    if (seen.has(version)) continue;
+    seen.add(version);
+    out.push({ ref, version });
+  }
+  return out;
 }
 
 let engineReady = false;
@@ -96,16 +119,18 @@ async function ensureEngineClone() {
 
 // Return path to a docs-<version>.tgz, or throw. Tries the release asset first,
 // then builds from the tag with the engine's own bundle script.
-async function obtainBundle(version) {
+async function obtainBundle({ ref, version }) {
   const dest = join(CACHE, `docs-${version}.tgz`);
   await mkdir(CACHE, { recursive: true });
   await rm(dest, { force: true });
 
-  // fast path — release asset
+  // fast path — release asset. The release is addressed by `ref` (the tag as
+  // GitHub knows it); the asset is named by the bare `version`, matching what
+  // the engine's publish-docs-bundle workflow uploads.
   try {
-    const { stdout } = await run("gh", ["release", "view", version, "--repo", REPO, "--json", "assets", "-q", ".assets[].name"]);
+    const { stdout } = await run("gh", ["release", "view", ref, "--repo", REPO, "--json", "assets", "-q", ".assets[].name"]);
     if (stdout.split("\n").map((s) => s.trim()).includes(`docs-${version}.tgz`)) {
-      await run("gh", ["release", "download", version, "--repo", REPO, "--pattern", `docs-${version}.tgz`, "--dir", CACHE, "--clobber"]);
+      await run("gh", ["release", "download", ref, "--repo", REPO, "--pattern", `docs-${version}.tgz`, "--dir", CACHE, "--clobber"]);
       if (existsSync(dest)) {
         console.log(`[autosync] ${version}: downloaded release asset`);
         return { tgz: dest, source: "release-asset" };
@@ -117,8 +142,8 @@ async function obtainBundle(version) {
 
   // fallback — build from the tag
   await ensureEngineClone();
-  console.log(`[autosync] ${version}: building from tag (engine build-docs-bundle.sh)…`);
-  await run("git", ["-C", ENGINE_DIR, "checkout", "--detach", "--force", version]);
+  console.log(`[autosync] ${version}: building from tag ${ref} (engine build-docs-bundle.sh)…`);
+  await run("git", ["-C", ENGINE_DIR, "checkout", "--detach", "--force", ref]);
   await run("bash", [join(ENGINE_DIR, "scripts/docs/build-docs-bundle.sh"), `--version=${version}`], {
     cwd: ENGINE_DIR,
     env: { ...process.env, GOWORK: "off" },
@@ -131,8 +156,9 @@ async function obtainBundle(version) {
   return { tgz: dest, source: "built-from-tag" };
 }
 
-async function importVersion(version) {
-  const { tgz, source } = await obtainBundle(version);
+async function importVersion(rel) {
+  const { version } = rel;
+  const { tgz, source } = await obtainBundle(rel);
   const tmp = join(CONTENT_DIR, `.tmp-${version}`);
   await rm(tmp, { recursive: true, force: true });
   await mkdir(tmp, { recursive: true });
@@ -164,9 +190,9 @@ async function main() {
   const reg = await readRegistry();
   const present = new Set((reg.versions || []).map((v) => v.version));
   const wanted = tags
-    .filter((t) => cmpSemver(t, FLOOR) >= 0)
-    .filter((t) => FORCE.includes(t) || !present.has(t))
-    .sort(cmpSemver);
+    .filter((t) => cmpSemver(t.version, FLOOR) >= 0)
+    .filter((t) => FORCE.includes(t.version) || !present.has(t.version))
+    .sort((a, b) => cmpSemver(a.version, b.version));
 
   if (wanted.length === 0) {
     console.log(`[autosync] up to date — latest ${reg.latest}, ${present.size} versions present.`);
@@ -174,15 +200,15 @@ async function main() {
     return;
   }
 
-  console.log(`[autosync] to import: ${wanted.join(", ")}`);
+  console.log(`[autosync] to import: ${wanted.map((t) => t.version).join(", ")}`);
   const added = [], failed = [];
-  for (const v of wanted) {
+  for (const rel of wanted) {
     try {
-      await importVersion(v);
-      added.push(v);
+      await importVersion(rel);
+      added.push(rel.version);
     } catch (e) {
-      console.warn(`[autosync] ${v} FAILED: ${e?.message ?? e}`);
-      failed.push(v);
+      console.warn(`[autosync] ${rel.version} FAILED: ${e?.message ?? e}`);
+      failed.push(rel.version);
     }
   }
   console.log(`AUTOSYNC_RESULT added=${added.join(",")} failed=${failed.join(",")}`);
