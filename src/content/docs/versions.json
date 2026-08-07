@@ -1,6 +1,10 @@
 {
-  "latest": "0.14.0",
+  "latest": "0.15.0",
   "versions": [
+    {
+      "version": "0.15.0",
+      "engineVersion": "0.15.0"
+    },
     {
       "version": "0.14.0",
       "engineVersion": "0.14.0"
