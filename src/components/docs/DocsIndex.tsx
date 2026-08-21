@@ -2,13 +2,21 @@ import Link from "next/link";
 import Typewriter from "@/components/docs/Typewriter";
 import { docBlurb, getNav } from "@/lib/docs";
 
-// Preferred quick-start cards, by slug, if the version ships them.
-const STARTER_SLUGS = ["getting-started", "overview/why-memql-harness"];
+// Preferred quick-start cards, one slot each: the first slug a version ships
+// wins. The overview slot leads with the platform-first "What Is MemQL" page
+// (engine releases after 0.15.0) and falls back to the harness-module page
+// older bundles carry.
+const STARTER_SLOTS: string[][] = [
+  ["getting-started"],
+  ["overview/what-is-memql", "overview/why-memql-harness"],
+];
 
 export default function DocsIndex({ version }: { version: string }) {
   const sections = getNav(version);
   const bySlug = new Map(sections.flatMap((s) => s.items).map((i) => [i.slug, i]));
-  const starters = STARTER_SLUGS.map((s) => bySlug.get(s)).filter((x) => x !== undefined);
+  const starters = STARTER_SLOTS.map((slot) => slot.map((s) => bySlug.get(s)).find((x) => x !== undefined)).filter(
+    (x) => x !== undefined,
+  );
 
   return (
     <div className="max-w-[860px] pb-24">
@@ -22,8 +30,8 @@ export default function DocsIndex({ version }: { version: string }) {
       <p className="mt-6 max-w-[42em] text-[17px] leading-[1.6] text-fg-dim">
         These docs are generated from the memQL engine repository and versioned
         with each release — what you read here matches the code that shipped.
-        They cover the harness, the language, the AI layer, operations, and the
-        Cockpit.
+        They cover the platform and its modules (the harness among them), the
+        language, the AI layer, operations, and the Cockpit.
       </p>
 
       {/* quick starts */}

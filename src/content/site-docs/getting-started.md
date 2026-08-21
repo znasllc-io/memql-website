@@ -59,6 +59,7 @@ memql --version
 
 ## Where to go next
 
-- **Why it's a harness, not a library** — the proof behind the positioning.
+- **What is MemQL** — the platform, the modules it runs, and the clients you build on it.
+- **The harness module** — the proof-driven tour of the module that runs agents.
 - **The language (MQL)** — every behavior in the system is a typed construct.
 - **Concepts** — the data model, events, and the graph the memory lives in.

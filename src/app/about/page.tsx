@@ -3,9 +3,9 @@ import Link from "next/link";
 import MarketingShell from "@/components/seo/MarketingShell";
 
 export const metadata: Metadata = {
-  title: "About MemQL — the memory layer for AI agents",
+  title: "About MemQL — why the AI platform exists",
   description:
-    "Why MemQL exists: AI forgets when a conversation ends, and every team rebuilds the same fragmented memory stack. MemQL is the part of the system that remembers — open source, Apache 2.0.",
+    "Why MemQL exists: AI forgets when a conversation ends, and every team rebuilds the same fragmented memory stack. MemQL is the open-source AI platform — agents, automations, and voice on a time-series memory graph — built so the system remembers. Apache 2.0.",
   alternates: { canonical: "/about" },
   openGraph: {
     title: "About MemQL",
@@ -59,8 +59,9 @@ export default function AboutPage() {
 
       <H2>What it is</H2>
       <P>
-        MemQL is an AI-native, time-series memory graph with a single DSL &mdash; time-series and
-        event-driven by default, multi-tenant by partition. The full picture lives in the{" "}
+        MemQL is an open-source AI platform &mdash; agents, automations, and voice &mdash; built on a
+        time-series memory graph, with a single DSL: event-driven by default, per-row authorization
+        built in. The full picture lives in the{" "}
         <Link href="/docs" className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">docs</Link>{" "}
         and on the{" "}
         <Link href="/" className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">homepage</Link>;

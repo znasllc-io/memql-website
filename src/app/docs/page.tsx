@@ -5,7 +5,7 @@ import DocsIndex from "@/components/docs/DocsIndex";
 export const metadata: Metadata = {
   title: "Documentation — memQL",
   description:
-    "Complete documentation for memQL and the Cockpit, generated from the engine repository and versioned per release — the harness, the language, memory, the AI layer, operations, and the Cockpit.",
+    "Complete documentation for memQL and the Cockpit, generated from the engine repository and versioned per release — the platform and its modules, the language, the memory graph, the AI layer, operations, and the Cockpit.",
   alternates: { canonical: "/docs" },
 };
 

@@ -36,11 +36,11 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "How does MemQL fit into an AI harness?",
-    a: "MemQL is the memory and state layer of the harness, as a database rather than glue code. The harness spine — plan, step, observation — is modeled as first-class, append-only, time-series data, so an agent's working state and its history are the same queryable substrate. recall() blends recency and relevance to surface the right memories; consolidation distills what happened into what is generally true; and because every run is recorded with provenance, it can be traced, replayed, and evaluated. You declare the behavior in one DSL and the engine handles persistence, time-awareness, retries, and isolation.",
+    a: "MemQL ships the harness as one module of an AI platform built on a time-series memory graph, rather than as glue code you assemble. The harness spine — plan, step, observation — is modeled as first-class, append-only, time-series data, so an agent's working state and its history are the same queryable substrate. recall() blends recency and relevance to surface the right memories; consolidation distills what happened into what is generally true; and because every run is recorded with provenance, it can be traced, replayed, and evaluated. You declare the behavior in one DSL and the platform handles persistence, time-awareness, retries, and isolation.",
   },
   {
     q: "Is an AI harness the same as an agent framework like LangChain?",
-    a: "They overlap but solve different problems. Prompt/agent frameworks help you compose chains and tool calls in application code. A harness is the runtime that actually carries a task to completion — the loop, the budgets, the convergence. MemQL is neither a prompt framework nor a model; it is the memory and state layer a harness relies on, so the agent's plan, steps, and observations are durable, time-aware, and inspectable instead of living in process memory.",
+    a: "They overlap but solve different problems. Prompt/agent frameworks help you compose chains and tool calls in application code. A harness is the runtime that actually carries a task to completion — the loop, the budgets, the convergence. MemQL is neither a prompt framework nor a model; it is an AI platform whose harness module runs that loop on a time-series memory graph, so the agent's plan, steps, and observations are durable, time-aware, and inspectable instead of living in process memory.",
   },
 ];
 
@@ -85,9 +85,9 @@ export default function AiHarnessPage() {
       <p className="mt-6 text-[16px] leading-[1.7] text-fg-dim">
         The model is the reasoning. The harness is the loop, the tools, the budgets — and, above all,
         the <strong className="font-semibold text-fg">memory</strong>. This page explains what a harness
-        does and where agent memory fits, because memory is the part most teams improvise and the part{" "}
+        does and where agent memory fits, because memory is the part most teams improvise and the substrate{" "}
         <Link href="/" className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">MemQL</Link>{" "}
-        is built to be.
+        is built on.
       </p>
 
       {FAQ.map((f) => (
@@ -103,7 +103,7 @@ export default function AiHarnessPage() {
         <ul className="mt-3 space-y-2 text-[15.5px] text-fg-dim">
           <li>
             <Link href="/docs/latest/overview/why-memql-harness" className="font-medium text-accent underline decoration-accent/30 underline-offset-2 hover:decoration-accent">
-              Memory &amp; the agent harness
+              The harness module
             </Link>{" "}
             — how recall, consolidation, and the plan/step/observation loop work in MemQL.
           </li>

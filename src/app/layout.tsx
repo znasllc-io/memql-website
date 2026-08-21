@@ -38,10 +38,15 @@ const display = Squada_One({
 const SITE_URL = "https://memql.io";
 // Search-facing title: always qualified (never bare "MemQL") so Google stops
 // folding us into MemSQL/Emacs `memql` results. Uses "AI" (what people search)
-// not "SI". Leads with the Tier-2 phrase "agent memory database".
-const TITLE = "MemQL — Agent Memory Database & AI Harness";
+// not "SI". Platform-first, and it names the storage layer precisely ("on a
+// time-series memory graph") instead of claiming a database category: MemQL
+// embeds TimescaleDB under the Timescale License, whose self-hosting grant
+// turns on the product NOT being presented as a database (znasllc-io/memql#4199).
+// Never reintroduce "memory database" / "graph database" wording here. The
+// harness is one module of the platform and stays out of the title.
+const TITLE = "MemQL — The AI Platform: Agents, Automations & Voice on a Time-Series Memory Graph";
 const DESCRIPTION =
-  "MemQL is an open-source, time-series memory graph for AI agents — a persistent, queryable, time-aware memory layer for agent harnesses. One DSL, written in Go.";
+  "MemQL is the open-source AI platform: agents, automations, and voice running as one deployable system, built on a time-series memory graph. Declare behavior in one DSL; a mesh of Go nodes runs it, remembers it, and lets you inspect it.";
 
 // Repos that live on this site — used as sameAs entity signals so search
 // engines learn MemQL's identity (and that it is not MemSQL/SingleStore).
@@ -60,17 +65,21 @@ export const metadata: Metadata = {
   publisher: "ZNAS",
   keywords: [
     "MemQL",
+    "AI platform",
+    "open-source AI platform",
+    "AI agent platform",
+    "agent runtime",
+    "AI automations",
+    "voice agents",
+    "time-series memory graph",
     "agent memory",
-    "agent memory database",
     "memory layer for AI agents",
     "AI harness",
+    "agent harness",
     "AI agent memory",
     "temporal memory for AI agents",
-    "time-series graph database",
     "agentic memory layer",
-    "agent harness",
     "Go agent memory",
-    "memory database for AI agents",
     "AI agents",
     "memory graph",
     "open source",
@@ -115,11 +124,11 @@ const JSON_LD = {
       "@type": "SoftwareApplication",
       "@id": `${SITE_URL}/#software`,
       name: "MemQL",
-      alternateName: ["MemQL Database", "MemQL agent memory"],
+      alternateName: ["MemQL AI platform", "MemQL agent memory"],
       applicationCategory: "DeveloperApplication",
       operatingSystem: "Cross-platform",
       description:
-        "Open-source, time-series memory graph that serves as the memory layer for AI agents and agent harnesses — persistent, queryable, time-aware agent memory, declared in a single DSL. Written in Go.",
+        "Open-source AI platform — agents, automations, and voice as one deployable system, built on a time-series memory graph. Behavior is declared in a single DSL and run by a mesh of specialized nodes; the agent harness is one module of it. Written in Go.",
       url: SITE_URL,
       programmingLanguage: "Go",
       license: "https://www.apache.org/licenses/LICENSE-2.0",

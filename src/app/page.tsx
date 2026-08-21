@@ -120,13 +120,14 @@ function Nav() {
 /* ───────────────────────────── hero ───────────────────────────── */
 
 function Hero() {
-  // The harness's job, in four lines — the proof panel that replaces the old
-  // MQL code window (syntax now lives in the docs, not the landing).
+  // What the platform runs, in four lines — the proof panel that replaces the
+  // old MQL code window (syntax now lives in the docs, not the landing). The
+  // harness is listed as one module, never as the headline.
   const does = [
-    ["the agent loop", "A terminating tool-calling loop, run as a service — not your for-loop."],
-    ["cost & safety spine", "Rate ceiling, per-plan budgets, and loop breakers. On by default."],
-    ["memory substrate", "An append-only time-series graph. Recall blends recency and relevance."],
-    ["multi-node & observable", "One Go source tree compiles into a secured, traced node mesh."],
+    ["agents", "The harness module: a terminating tool-calling loop run as a service, with a cost-and-safety spine on by default."],
+    ["automations", "Event- and schedule-triggered workflows, declared in the same DSL as the concepts they act on."],
+    ["voice", "Real-time voice agents, with video avatars, run as their own node type of the mesh."],
+    ["memory graph", "An append-only time-series graph underneath all of it. Recall blends recency and relevance; provenance and replay are built in."],
   ];
   return (
     <section id="top" className="relative overflow-hidden">
@@ -134,15 +135,16 @@ function Hero() {
       <HeroGraph />
       <div className="relative z-10 mx-auto grid max-w-[1180px] grid-cols-1 gap-12 px-8 pt-36 pb-32 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-16">
         <div>
-          <Eyebrow>// the go-to golang llm harness</Eyebrow>
+          <Eyebrow>// the open-source ai platform</Eyebrow>
           <h1 className="mt-6 font-serif text-[44px] leading-[1.08] tracking-tight text-fg sm:text-[56px] lg:text-[60px]">
-            The agent runtime, not the parts to build one.
+            The AI platform, not the parts to build one.
           </h1>
           <p className="mt-7 max-w-[34em] text-[18px] leading-[1.6] text-fg-dim">
-            memQL is a Go harness and memory substrate that{" "}
-            <em className="not-italic text-fg">runs</em>{" "}the agent loop, enforces a
-            cost-and-safety spine, and remembers across restarts. Other frameworks hand you pieces to
-            assemble a runtime &mdash; memQL is the runtime. Ship better AI, faster.
+            memQL{" "}
+            <em className="not-italic text-fg">runs</em>{" "}agents, automations, and voice as one
+            deployable system, built on a time-series memory graph. You declare behavior in one DSL; a
+            mesh of Go nodes runs it, remembers it, and lets you inspect it. Other frameworks hand you
+            pieces to assemble &mdash; memQL is the platform you install.
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-4">
             <NeuronLink
@@ -158,10 +160,10 @@ function Hero() {
           </div>
         </div>
 
-        {/* proof panel — what the harness handles, no syntax */}
+        {/* proof panel — what the platform runs, no syntax */}
         <div className="rounded-lg border border-border bg-bg-elev/60 p-1.5 backdrop-blur-sm">
           <div className="rounded-md border border-border/60 bg-bg-panel/60 px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-dim">
-            // what the harness handles
+            // what the platform runs
           </div>
           <ul className="divide-y divide-border">
             {does.map(([title, body]) => (
@@ -276,12 +278,13 @@ function Harness() {
     },
   ];
   return (
-    <Section eyebrow="the harness" index="01" id="harness">
+    <Section eyebrow="the harness module" index="01" id="harness">
       <Headline>What a production agent actually needs.</Headline>
       <Lede className="max-w-[44em]">
         An agent in a demo is a <Inline>while</Inline> loop around one model call. In production it has
         to terminate for the right reason, remember across restarts, and not bankrupt you when a model
-        gets stuck repeating itself. memQL makes those the substrate.
+        gets stuck repeating itself. memQL&rsquo;s harness module &mdash; one module of the platform &mdash;
+        makes those the substrate.
       </Lede>
       <p className="mt-7 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
         A plan fans into steps, each step leaves an observation, recall pulls the relevant ones back, and
@@ -324,14 +327,14 @@ function Harness() {
       <p className="mt-12 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
         <span className="text-accent">// the proof</span> &middot; every claim above points at the code.{" "}
         <a href="/docs/latest/overview/why-memql-harness" className="text-accent underline decoration-accent/30 underline-offset-2 transition-colors hover:decoration-accent">
-          Why memQL is a harness &rarr;
+          The harness module &rarr;
         </a>
       </p>
       <p className="mt-6 max-w-[44em] font-mono text-[13px] leading-[1.6] text-muted">
         <span className="text-accent">// the field</span> &middot; the others give you the pieces to build an
-        agent runtime; memQL is the agent runtime.{" "}
+        agent runtime; memQL is the platform whose harness module is the agent runtime.{" "}
         <a href="/docs/latest/overview/vs-other-harnesses" className="text-accent underline decoration-accent/30 underline-offset-2 transition-colors hover:decoration-accent">
-          memQL vs. other harnesses &rarr;
+          memQL vs. agent libraries and frameworks &rarr;
         </a>
       </p>
     </Section>
@@ -349,7 +352,7 @@ function CoPresent() {
         Visionarys is building <span className="text-fg">CoPresent</span>{" "}&mdash; a multi-agent product
         with real-time voice, video avatars, and a shared canvas &mdash; on memQL right now, on the path
         to release. The breakers, the budgets, the memory consolidation, and the cross-node tool relay
-        exist because a shipping product needs them. memQL is the extracted, open-source harness
+        exist because a shipping product needs them. memQL is the extracted, open-source platform
         underneath.
       </Lede>
 
@@ -365,7 +368,7 @@ function CoPresent() {
       </Reveal>
 
       <p className="mt-8 max-w-[46em] text-[16px] leading-[1.7] text-fg-dim">
-        The strongest proof that this is a harness and not a slide deck is a product depending on it in
+        The strongest proof that this is a platform and not a slide deck is a product depending on it in
         production. CoPresent is that product.
       </p>
     </Section>
@@ -378,11 +381,11 @@ function ForWhom() {
   const items = [
     {
       label: "// the agent product builder",
-      body: "You're shipping a product where memory and reliability matter. You've outgrown stuffing context into prompts, and outgrown a vector DB next to a Postgres next to a custom event bus. memQL is the runtime you'd build if you had a year.",
+      body: "You're shipping a product where memory and reliability matter. You've outgrown stuffing context into prompts, and outgrown a vector DB next to a Postgres next to a custom event bus. memQL is the platform you'd build if you had a year.",
     },
     {
       label: "// the Go platform engineer",
-      body: "You want a Go-native agent runtime, not a Python stack to operate. memQL is one substrate: the loop, the memory, the cost guardrails, the node mesh, and the identity layer — already built, not assembled.",
+      body: "You want a Go-native AI platform, not a Python stack to operate. memQL is one system: the harness, the memory graph, the cost guardrails, the node mesh, and the identity layer — already built, not assembled.",
     },
     {
       label: "// the agentic-os curious",
@@ -416,8 +419,8 @@ function Close() {
           memQL and the Cockpit are open source, Apache 2.0. Alpha.
         </p>
         <p className="mx-auto mt-9 max-w-[34em] font-mono text-[12.5px] leading-[1.65] text-muted">
-          The go-to Golang LLM harness &mdash; the runtime, the memory, and the safety spine your agents
-          run on.
+          The open-source AI platform &mdash; agents, automations, and voice on a time-series memory
+          graph. The harness that runs your agents is one module of it.
         </p>
         <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
           <NeuronLink
