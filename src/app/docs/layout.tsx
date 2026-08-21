@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Docs — memQL",
   description:
-    "Versioned documentation for memQL, generated from the engine repository: the harness, the language, the AI layer, operations, and the Cockpit.",
+    "Versioned documentation for memQL, generated from the engine repository: the platform and its modules (the harness among them), the language, the AI layer, operations, and the Cockpit.",
   alternates: { canonical: "/docs" },
 };
 

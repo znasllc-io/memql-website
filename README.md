@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Source for the MemQL marketing site.</strong><br>
-  AI-native time-series memory graph with a single DSL.
+  The open-source AI platform: agents, automations, and voice on a time-series memory graph, with a single DSL.
 </p>
 
 <p align="center"><sub><em>Designed and built with Claude as co-author.</em></sub></p>

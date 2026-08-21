@@ -5,7 +5,7 @@ import MarketingShell from "@/components/seo/MarketingShell";
 export const metadata: Metadata = {
   title: "AI Agent Memory Glossary — MemQL",
   description:
-    "Plain definitions for AI agent memory terms: agent memory database, memory layer for AI agents, AI harness, temporal memory, time-series graph, episodic vs semantic memory, recall, and append-only memory.",
+    "Plain definitions for AI agent memory terms: AI platform, memory layer for AI agents, AI harness, temporal memory, time-series memory graph, episodic vs semantic memory, recall, and append-only memory — and where MemQL fits each one.",
   alternates: { canonical: "/glossary" },
   openGraph: {
     title: "AI Agent Memory Glossary",
@@ -23,8 +23,8 @@ const TERMS: Term[] = [
     body: <>The information an AI agent keeps across time so it can act coherently — what it has seen, done, decided, and learned. Without it an agent is stateless and starts from zero on every turn.</>,
   },
   {
-    term: "Agent memory database",
-    body: <>A database purpose-built to store and serve an agent&rsquo;s memory — not a general store you bolt onto an agent, but one whose data model is the agent&rsquo;s state and history. <strong className="font-semibold text-fg">MemQL</strong> is an agent memory database: an append-only, time-series graph on PostgreSQL + TimescaleDB.</>,
+    term: "AI platform (for agents)",
+    body: <>A system you install that runs agents end to end — the runtime, the memory, the tools, the automations, voice, identity, and operations — rather than a library you import and wire up yourself. <strong className="font-semibold text-fg">MemQL</strong> is an AI platform: agents, automations, and voice on a time-series memory graph (PostgreSQL + TimescaleDB, embedded and managed for you), declared in one DSL. The agent harness is one module of it.</>,
   },
   {
     term: "Memory layer for AI agents",
@@ -40,7 +40,7 @@ const TERMS: Term[] = [
   },
   {
     term: "Time-series graph (for AI)",
-    body: <>A data model that is both a graph (records relate to one another) and a time-series (every record is timestamped and history is preserved). It lets an agent traverse relationships <em>and</em> reason over time in the same store — MemQL&rsquo;s core shape.</>,
+    body: <>A data model that is both a graph (records relate to one another) and a time-series (every record is timestamped and history is preserved). It lets an agent traverse relationships <em>and</em> reason over time in the same store — the memory graph MemQL is built on.</>,
   },
   {
     term: "Episodic vs. semantic memory",
