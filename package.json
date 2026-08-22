@@ -8,7 +8,8 @@
     "prebuild": "node scripts/fetch-stars.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "og-image": "node scripts/og-image.mjs"
   },
   "dependencies": {
     "next": "^16.3.0",
@@ -18,11 +19,14 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "postcss": "^8.5.10",
+    "satori": "^0.33.3",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3"
   }
