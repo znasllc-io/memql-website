@@ -1,0 +1,635 @@
+---
+title: MemQL Events System
+audience: public
+status: stable
+area: concepts
+sinceVersion: 0.9.0
+owner: znas
+---
+
+# MemQL Events System
+
+**Last Updated:** 2026-02-21
+
+This document describes the event pub/sub system in MemQL, which enables real-time notifications for graph mutations, queries, AI completions, and session lifecycle events.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    EVENT BUS (Pure Go)                          │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  • sync.RWMutex + map for subscriber registry             │ │
+│  │  • Go channels for async event delivery                   │ │
+│  │  • Goroutine per subscriber for non-blocking fan-out      │ │
+│  │  • Topic-based routing with glob patterns                 │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│  Per-node in-memory bus (no Redis/NATS needed)                 │
+└───────────┬─────────────────────────────────────────────────────┘
+            │ Publish()                            
+            ▼                                      
+┌───────────────────────────────────────────────────────────────┐
+│  Event Emitters                                               │
+│  • MemQL Engine (node created/deleted/updated)                │
+│  • Query executor (query executed)                            │
+│  • AI runtime (completion started/finished/error)             │
+│  • System (session opened/closed, subscription changes)       │
+└───────────────────────────────────────────────────────────────┘
+```
+
+## Event Topics
+
+Events are organized into hierarchical topics using dot notation. Subscribers can use glob patterns to match multiple topics.
+
+### Graph Node Events
+
+| Topic | Kind | Description |
+|-------|------|-------------|
+| `graph.node.created.{concept}` | `NODE_CREATED` | Concept-specific creation (e.g., `graph.node.created.v1:library:artifact`) |
+| `graph.node.updated.{concept}` | `NODE_UPDATED` | Concept-specific update |
+| `graph.node.deleted.{concept}` | `NODE_DELETED` | Concept-specific deletion |
+
+Graph CDC topics are exactly four segments: `graph.node.{action}.{concept}`.
+The concept id carries no dots (it is colon-delimited), so it occupies the
+single trailing segment. (The old `{partition}` segment between the action
+and the concept was retired in #56 -- topics are concept-keyed, not
+partition-keyed.)
+
+> **Composing these topics is the SERVER's job.** Clients do NOT write
+> topic strings. A structured graph subscription carries a `concept` +
+> a set of `actions`, and the engine composes the bus topic (memql#2460).
+> See [Client Subscriptions](#client-subscriptions-are-authorized-per-row-memql4309)
+> and [Subscribing to Events](#subscribing-to-events) below. The topic
+> grammar in this table is documented for observability, not as a
+> client-authored wire string.
+
+**Payload for node events:** the node's own `concept` (type id) and the
+`eventKind` (`node_created` / `node_updated` / `node_deleted`) are
+first-class fields -- a client matches on those, never by parsing the
+`topic` string.
+```json
+{
+  "id": "abc123",
+  "nodeId": "abc123",
+  "concept": "v1:agents:agent",
+  "eventKind": "node_created",
+  "actor": "user@example.com",
+  "nodeType": "object",
+  "createdAt": "2026-03-24T10:30:00Z"
+}
+```
+(Ids in the payload are **bare** on the client wire per the bare-ids
+contract; `concept` / `topic` / `eventKind` are concept-carrier keys and
+stay verbatim. See [Node Identifier Conventions](identifiers.md).)
+
+### Query Events
+
+| Topic | Kind | Description |
+|-------|------|-------------|
+| `query.executed` | `QUERY_EXECUTED` | Emitted after a query completes |
+
+**Payload:**
+```json
+{
+  "durationMs": 42,
+  "resultCount": 15,
+  "cached": false
+}
+```
+
+### AI Completion Events
+
+| Topic | Kind | Description |
+|-------|------|-------------|
+| `si.completion.started` | `SI_COMPLETION_STARTED` | Emitted when an AI request begins |
+| `si.completion.finished` | `SI_COMPLETION_FINISHED` | Emitted when an AI request succeeds |
+| `si.completion.error` | `SI_COMPLETION_ERROR` | Emitted when an AI request fails |
+
+**Payload for started/finished:**
+```json
+{
+  "templateId": "summarize",
+  "provider": "openai",
+  "durationMs": 1234,
+  "cached": false
+}
+```
+
+**Payload for error:**
+```json
+{
+  "templateId": "summarize",
+  "provider": "openai",
+  "durationMs": 500,
+  "error": "rate limit exceeded"
+}
+```
+
+### Session Events
+
+| Topic | Kind | Description |
+|-------|------|-------------|
+| `session.opened` | `SESSION_OPENED` | Emitted when a gRPC streaming session starts |
+| `session.closed` | `SESSION_CLOSED` | Emitted when a gRPC streaming session ends |
+
+**Payload:**
+```json
+{
+  "subject": "user@example.com"
+}
+```
+
+### Automation Events
+
+| Topic | Kind | Description |
+|-------|------|-------------|
+| `automation.started` | `AUTOMATION_STARTED` | Emitted when an automation begins execution |
+| `automation.completed` | `AUTOMATION_COMPLETED` | Emitted when an automation completes successfully |
+| `automation.failed` | `AUTOMATION_FAILED` | Emitted when an automation fails |
+| `automation.step.started` | `AUTOMATION_STEP_STARTED` | Emitted when an automation step begins |
+| `automation.step.completed` | `AUTOMATION_STEP_COMPLETED` | Emitted when an automation step completes |
+| `automation.step.failed` | `AUTOMATION_STEP_FAILED` | Emitted when an automation step fails |
+
+> Note: `automation.#` events stay **node-local** — they are blocked from
+> cross-node forwarding (see the mesh routing rules). A consumer that must
+> see automation activity on a different replica needs a dedicated topic
+> with its own forward rule. The self-healing precondition-miss signal below
+> is exactly such a topic.
+
+### Self-Healing Events
+
+| Topic | Kind | Description |
+|-------|------|-------------|
+| `healing.precondition.missed` | `PRECONDITION_MISSED` | Emitted when a first-class automation precondition evaluates false at the start of a run. The clean self-healing repair trigger AND the cross-machine portability signal. Unlike `automation.#`, this topic **forwards across the mesh** (a `healing.#` broadcast routing rule) so a repair loop on any replica hears it. |
+
+**Payload for a precondition miss:**
+```json
+{
+  "automationName": "deployStaging",
+  "automationOrigin": "unified:deploypack/automations.memql:deployStaging",
+  "executionId": "exec-abc123",
+  "preconditionId": "digestPinned",
+  "check": "exists(args.imageDigest)",
+  "literal": "imageDigest",
+  "preconditionDescription": "the deploy needs a pinned image digest",
+  "triggerTopic": "graph.node.updated.v1:cluster:deployment",
+  "triggerPayload": { "imageDigest": "" }
+}
+```
+
+The `literal` + `triggerPayload` together name the machine-specific value
+that did not hold on this machine — the input the repair loop relativizes or
+rebinds when it proposes a typed patch (Epic 4).
+
+**Payload for automation started:**
+```json
+{
+  "automationName": "leadClassification",
+  "executionId": "exec-abc123",
+  "triggeredBy": "cron"
+}
+```
+
+**Payload for automation completed:**
+```json
+{
+  "automationName": "leadClassification",
+  "executionId": "exec-abc123",
+  "duration": 1234,
+  "stepCount": 5
+}
+```
+
+**Payload for automation failed:**
+```json
+{
+  "automationName": "leadClassification",
+  "executionId": "exec-abc123",
+  "error": "step 'classify' failed: timeout",
+  "duration": 5000
+}
+```
+
+**Payload for step events:**
+```json
+{
+  "automationName": "leadClassification",
+  "executionId": "exec-abc123",
+  "stepId": "classify",
+  "stepType": "function",
+  "duration": 150
+}
+```
+
+## Subscribing to Events
+
+### Via gRPC Stream
+
+Clients can subscribe to events by sending a `SubscribeMsg` over the bidirectional gRPC stream:
+
+```protobuf
+message SubscribeMsg {
+  string subscription_id = 1;
+  SubscriptionKind kind = 2;
+  string filter = 3;                      // legacy free-text; NON-graph kinds only
+  google.protobuf.Struct config = 4;
+  string concept = 5;                     // structured graph subscribe (memql#2460)
+  repeated GraphNodeAction actions = 6;   // structured graph subscribe
+}
+
+enum SubscriptionKind {
+  SUBSCRIPTION_KIND_UNSPECIFIED = 0;
+  SUBSCRIPTION_KIND_TELEMETRY = 100;
+  SUBSCRIPTION_KIND_MESSAGE = 200;
+  SUBSCRIPTION_KIND_QUERY_SPEC = 300;
+  SUBSCRIPTION_KIND_AI_STREAM = 400;
+  SUBSCRIPTION_KIND_GRAPH_EVENTS = 500;
+  SUBSCRIPTION_KIND_DOMAIN_EVENTS = 550;
+  SUBSCRIPTION_KIND_AUTOMATION_EVENTS = 600;
+  SUBSCRIPTION_KIND_ALL = 700;
+}
+
+enum GraphNodeAction {
+  GRAPH_NODE_ACTION_UNSPECIFIED = 0;
+  GRAPH_NODE_ACTION_CREATED = 1;
+  GRAPH_NODE_ACTION_UPDATED = 2;
+  GRAPH_NODE_ACTION_DELETED = 3;
+}
+```
+
+### Graph subscriptions are STRUCTURED (memql#2460)
+
+A graph subscription (`SUBSCRIPTION_KIND_GRAPH_EVENTS`) carries a
+`concept` + a set of `actions`, and the **server composes the bus
+topic**. The client never writes a `graph.node.<action>.<concept>`
+string, so the topic grammar is not part of the client wire contract --
+a future grammar change is no longer a wire change.
+
+- `concept` -- canonical concept TYPE id (e.g. `v1:library:artifact`).
+  A concept type is legitimately client-visible; import it from the
+  generated SDK (`Concepts.LIBRARY_ARTIFACT`). **Empty = all concepts.**
+- `actions` -- the CDC verbs to receive. **Empty = all actions.**
+
+The server composes one bus pattern per action (`graph.node.<verb>.<concept>`),
+using `#` for all-concepts and `*` for all-actions.
+
+**The legacy free-text `filter` is REJECTED for graph subscriptions** --
+sending it on a `GRAPH_EVENTS` subscribe returns a `subscription-error`.
+`filter` survives only for the non-graph kinds below.
+
+| Kind | Value | Subscribe surface | Default (empty) |
+|------|-------|-------------------|-----------------|
+| `SUBSCRIPTION_KIND_GRAPH_EVENTS` | 500 | **structured** (`concept` + `actions`) | all concepts, all actions |
+| `SUBSCRIPTION_KIND_TELEMETRY` | 100 | free-text `filter` | `telemetry.#` |
+| `SUBSCRIPTION_KIND_MESSAGE` | 200 | free-text `filter` | `message.#` |
+| `SUBSCRIPTION_KIND_QUERY_SPEC` | 300 | free-text `filter` | `query.#` |
+| `SUBSCRIPTION_KIND_AI_STREAM` | 400 | free-text `filter` | `ai.#` |
+| `SUBSCRIPTION_KIND_DOMAIN_EVENTS` | 550 | free-text `filter` | `#` |
+| `SUBSCRIPTION_KIND_AUTOMATION_EVENTS` | 600 | free-text `filter` | `automation.#` |
+| `SUBSCRIPTION_KIND_ALL` | 700 | (none) | `#` (matches everything) |
+
+Supplying the structured `concept`/`actions` on a non-graph kind is
+also rejected.
+
+**Free-text filter glob grammar** (non-graph kinds): `*` matches exactly
+one segment, `#` matches zero or more segments.
+
+### Client subscriptions are AUTHORIZED PER ROW (memql#4309)
+
+A subscription delivers rows, so it is an egress of rows and is gated like
+one. **A `graph.node.*` event reaches a stream only if the same function that
+admits the row on a read admits it for that stream's actor** -- one seam, not a
+second rulebook. Undeclared concepts admit everyone, declared concepts enforce
+their tier; that is exactly what their reads already do, so a subscription can
+neither see more than a read nor less.
+
+Until memql#4309 there was no gate here at all: a signed-in stream could
+subscribe to any concept and receive every user's rows.
+
+Three outcomes per event:
+
+| Verdict | What arrives |
+|---|---|
+| admitted | the event, unchanged |
+| denied | nothing. The stream is not told the row exists -- being told that a row you may not read exists is itself a disclosure |
+| undecided | an **ID-ONLY** notification (below) |
+
+**`payload_omitted`.** A concept declaring the `granted` tier
+(`@rowAuthz(via="<spec>")`) cannot be decided against one row: the predicate is
+a relationship spec, and deciding it needs the join a filter performs. Such an
+event is delivered with `EventNotification.payload_omitted = true` and a
+payload carrying only the row's identity:
+
+```json
+{
+  "id": "abc123",
+  "concept": "v1:agents:agent",
+  "eventKind": "node_created",
+  "createdAt": "2026-03-24T10:30:00Z"
+}
+```
+
+**Re-read the row through the normal read path and use what that returns; if
+the read refuses, drop the event.** The SDKs surface the flag as
+`event.payloadOmitted` (TypeScript) / `Event.PayloadOmitted` (Go). Ignoring it
+is safe but useless -- you get a row whose fields are absent, so a consumer
+degrades to rendering nothing rather than to leaking anything.
+
+**Non-graph kinds are owner/admin-only** (memql#4311). `TELEMETRY`, `MESSAGE`,
+`AI_STREAM` and `ALL` carry node-level events with no row owner to authorize
+against, and `ALL` (`#`) carries every graph topic besides. A caller below
+`admin` is refused at subscribe time with a `subscription-error` naming
+`PermissionDenied`; the subscription is not registered. An `ALL` subscription
+an admin does hold still passes each graph event through the per-row admission
+above -- the check keys on the EVENT's topic, not on the subscription's kind,
+so `ALL` is not a way to reach rows `GRAPH_EVENTS` would be denied.
+
+Full model: [per-row authorization audit](../operate/auth/per-row-authz-audit.md#subscriptions-are-an-egress-memql4309).
+
+### How to CONSUME events without diverging from the store (memql#4536-#4540)
+
+Everything above says what an event IS. This says how to hold a list current
+with them, because the obvious readings of the pieces above are wrong in ways
+that only show up under load.
+
+**Subscribe, THEN read.** The order is load-bearing, not stylistic. The engine
+registers a subscription SYNCHRONOUSLY on the request path and runs a read on
+its own goroutine, so a row written between the two arrives as an event and
+folds onto the seeded answer by id. Read-then-subscribe can miss a row
+FOREVER, and no amount of client care recovers it -- the row simply is not in
+the read and its event was never delivered. Pinned server-side by
+`TestSubscribeRegistersOnTheBusBeforeAcking`, so a refactor that moves
+registration off the request path breaks a test rather than every client.
+
+**A gap is data, and the answer to it is to RE-SEED.** Every notification
+carries `seq` -- its position in this stream's delivery sequence, from 1 --
+and `gap_before`, set when deliveries were dropped between the previous
+notification and this one. The per-stream event channel is bounded and the
+forwarder drops on full rather than stalling a write; before these fields that
+drop was a server-side WARN and nothing else, so a folding consumer diverged
+from the store permanently while every surface still rendered as live.
+
+On either signal, re-run the read that produced your rows and fold subsequent
+events onto the fresh answer. **A reconnect is a gap by construction** -- a new
+stream starts a new `seq` space at 1 -- so treat stream establishment as one
+rather than comparing numbers across connections. `seq == 0` means "this server
+does not number its deliveries" (it predates the field), never "the first
+event".
+
+**Continuity is a property of the STREAM, not of your subscription.** This is
+the reading that is easy to get wrong in both directions at once: `seq`
+numbers every notification on the socket, and `gap_before` lands on whichever
+delivery happens to come first after a drop. A handler watching only its own
+subscription therefore sees holes that belong to its neighbours -- and may
+never see the flag for the events IT lost. Read both once, per connection,
+over every delivery (`SubscriptionManager.onDelivery` in `sdk/ts`), and
+re-seed everything when it reports a break.
+
+**An id-only event is re-read, and a refusal is dropped silently.** The
+`payload_omitted` rule above, restated as a fold: never render the id-only
+payload as a row (every field would be blank); re-read through the authorized
+path; if that read refuses, drop the event without a trace on screen --
+announcing "a row you may not see changed" leaks exactly what the gate
+withheld.
+
+**Re-apply the READ's scope to folded rows.** A subscription is scoped by
+concept; a read is usually scoped by more. The two disagree the moment a
+caller can see rows the list deliberately excludes -- a cluster owner's
+subscription carries every machine while their "my machines" read carries
+theirs -- and folding those in makes rows appear that a refresh then removes.
+
+**The non-goals, and why.** There is no polling heartbeat anywhere: the
+socket, gap detection and re-seed ARE the safety net. There is no durable
+replay and no `since` cursor, deliberately -- retaining events per stream for
+replay is a durable substrate this system does not have, and half of one, a
+best-effort buffer that usually replays, is worse than none: it teaches
+clients to skip the re-seed path that is the only correct answer when the
+buffer misses. If replay is ever genuinely needed, the escalation is a durable
+event log with its own retention contract, not a bigger channel.
+
+`sdk/ts`'s `LiveCollection` implements all of this; a consumer folding by hand
+owes itself every rule above. Design record:
+[2026-08-25 caching and live data](../../superpowers/specs/2026-08-25-caching-and-live-data-architecture-design.md).
+
+### Concept-registry subscriptions are a SEPARATE stream (memql#4238)
+
+Graph subscriptions above are about ROWS -- a node of some concept being
+created/updated/deleted. The **concept registry** itself -- the set of concept
+*types* the cluster knows -- also changes at runtime: a concept trained/promoted
+into a running cluster, or demoted/removed from it. A client that read the
+registry once (`ConceptsListMsg`, or the `ConceptsSubscribeMsg` CDC-filter
+catalog) would not see that change until it reconnected.
+
+`ConceptsSubscribeMsg` therefore has a **follow mode**. `follow=false` (the
+default, and every existing caller) is unchanged -- the one-shot
+`ConceptsSubscribeResult` catalog of CDC filters grouped by domain. `follow=true`
+opens a registry-DELTA stream:
+
+- the first reply is a `ConceptsRegistryDelta` **snapshot** (`reset=true`,
+  carrying the whole concept set in `added`, a `generation`, and a
+  `subscription_id`);
+- then one `ConceptsRegistryDelta` per change -- `added` for a promote or
+  re-promote (upsert by id), `removed` for a zero-row demote -- each stamping the
+  next `generation`;
+- until the client sends an `UnsubscribeMsg` for that `subscription_id`, or the
+  stream closes.
+
+`generation` is monotonically increasing; a client that receives a generation
+that is not exactly one past the last it saw has missed a delta (a slow consumer
+had one dropped) and re-snapshots by re-subscribing. A **retire** (a demote of a
+concept that still has rows -- it stays registered and readable, only new writes
+are refused) is not a registry-set change and is deliberately not delivered here.
+
+This rides the existing cross-node convergence: a durable promote/demote already
+broadcasts to every replica (`authoring.promote.*` / `authoring.demote.*`), and
+each replica re-registers the concept into its own registry -- which is where the
+delta is emitted, so a promote on one replica reaches a follower on another with
+no reconnect. Clients use `QueryClient.subscribeConceptRegistry` (sdk/ts); the
+console's concept hook folds the deltas in place.
+
+### Example: Subscribe to All Graph Events
+
+```javascript
+// Via WebSocket -- empty concept + empty actions = every graph event.
+ws.send(JSON.stringify({
+  message_id: "sub-1",
+  payload: {
+    subscribe: {
+      subscription_id: "my-graph-sub",
+      kind: 500 // SUBSCRIPTION_KIND_GRAPH_EVENTS
+    }
+  }
+}));
+```
+
+### Example: Subscribe to Specific Concept Events
+
+```javascript
+// Subscribe only to note creations. The SERVER composes the topic
+// graph.node.created.v1:notes:note; the client sends no topic string.
+ws.send(JSON.stringify({
+  message_id: "sub-2",
+  payload: {
+    subscribe: {
+      subscription_id: "note-events",
+      kind: 500, // SUBSCRIPTION_KIND_GRAPH_EVENTS
+      concept: "v1:notes:note",
+      actions: ["GRAPH_NODE_ACTION_CREATED"]
+    }
+  }
+}));
+```
+
+The SDKs wrap this: the TS core SDK exposes
+`SubscriptionManager.subscribeGraph(handler, { concept, actions })` and
+the Go SDK exposes `SubscriptionManager.SubscribeGraph(ctx, GraphSubscribeOptions{...})`.
+The legacy free-text `subscribe(pattern)` / `Subscribe(kind, filter)`
+paths remain for the non-graph kinds and reject `graph_events`.
+
+### Example: Subscribe to Automation Events
+
+```javascript
+// Subscribe to all automation events
+ws.send(JSON.stringify({
+  message_id: "sub-3",
+  payload: {
+    subscribe: {
+      subscription_id: "automation-events",
+      kind: 600, // SUBSCRIPTION_KIND_AUTOMATION_EVENTS
+      filter: ""  // Results in pattern: automation.#
+    }
+  }
+}));
+
+// Subscribe to only automation completions
+ws.send(JSON.stringify({
+  message_id: "sub-4",
+  payload: {
+    subscribe: {
+      subscription_id: "automation-completions",
+      kind: 600, // SUBSCRIPTION_KIND_AUTOMATION_EVENTS
+      filter: "completed"  // Results in pattern: automation.completed
+    }
+  }
+}));
+
+// Subscribe to step-level events for a specific automation
+ws.send(JSON.stringify({
+  message_id: "sub-5",
+  payload: {
+    subscribe: {
+      subscription_id: "step-events",
+      kind: 600, // SUBSCRIPTION_KIND_AUTOMATION_EVENTS
+      filter: "step.#"  // Results in pattern: automation.step.#
+    }
+  }
+}));
+```
+
+## Receiving Events
+
+Events are delivered as `EventNotification` messages:
+
+```protobuf
+message EventNotification {
+  string subscription_id = 1;
+  EventKind kind = 2;
+  google.protobuf.Timestamp ts = 3;
+  google.protobuf.Struct payload = 4;
+}
+
+enum EventKind {
+  EVENT_KIND_UNSPECIFIED = 0;
+  // Telemetry events (100s)
+  EVENT_KIND_TELEMETRY = 100;
+  // Message events (200s)
+  EVENT_KIND_MESSAGE = 200;
+  // Graph events (300s)
+  EVENT_KIND_GRAPH_UPDATE = 300;
+  EVENT_KIND_NODE_CREATED = 301;
+  EVENT_KIND_NODE_DELETED = 302;
+  EVENT_KIND_NODE_UPDATED = 303;
+  // Query events (400s)
+  EVENT_KIND_QUERY_EXECUTED = 400;
+  // AI events (500s)
+  EVENT_KIND_AI_EVENT = 500;
+  EVENT_KIND_AI_COMPLETION_STARTED = 501;
+  EVENT_KIND_AI_COMPLETION_FINISHED = 502;
+  EVENT_KIND_AI_COMPLETION_ERROR = 503;
+  // Session events (600s)
+  EVENT_KIND_SESSION_OPENED = 600;
+  EVENT_KIND_SESSION_CLOSED = 601;
+  // Automation events (700s)
+  EVENT_KIND_AUTOMATION_STARTED = 700;
+  EVENT_KIND_AUTOMATION_COMPLETED = 701;
+  EVENT_KIND_AUTOMATION_FAILED = 702;
+  EVENT_KIND_AUTOMATION_STEP_STARTED = 703;
+  EVENT_KIND_AUTOMATION_STEP_COMPLETED = 704;
+  EVENT_KIND_AUTOMATION_STEP_FAILED = 705;
+}
+```
+
+### Example Event Response
+
+```json
+{
+  "message_id": "evt-abc123",
+  "payload": {
+    "event": {
+      "subscription_id": "my-graph-sub",
+      "kind": 301,
+      "ts": "2025-12-02T10:30:00Z",
+      "payload": {
+        "topic": "graph.node.created.v1:notes:note",
+        "eventKind": "node_created",
+        "nodeId": "v1:notes:note:9c2f64f1-...",
+        "concept": "v1:notes:note",
+        "actor": "user@example.com"
+      }
+    }
+  }
+}
+```
+
+## Unsubscribing
+
+To stop receiving events for a subscription:
+
+```javascript
+ws.send(JSON.stringify({
+  message_id: "unsub-1",
+  payload: {
+    unsubscribe: {
+      subscription_id: "my-graph-sub"
+    }
+  }
+}));
+```
+
+## Implementation Details
+
+### Event Bus
+
+The event bus is a pure Go in-memory pub/sub implementation:
+
+- **Thread-safe**: Uses `sync.RWMutex` for subscriber registry
+- **Non-blocking**: Events are delivered asynchronously via goroutines
+- **Panic recovery**: Handler panics are caught and logged
+- **Pattern matching**: Supports glob patterns with `*` and `#` wildcards
+
+### No External Dependencies
+
+The event system requires no external infrastructure (Redis, NATS, etc.). All event routing happens in-memory within each MemQL node; in cluster mode the node-to-node `EventBridge` propagates events across the mesh (with dedup and TTL) over the same gRPC streams the nodes already share.
+
+### Event Delivery
+
+- Events are cloned before delivery to prevent mutation
+- Each subscriber receives events in a separate goroutine
+- If a subscriber's channel is full, events are dropped with a warning log
+
+### Cleanup
+
+- Subscriptions are automatically cleaned up when a session ends
+- The event bus properly shuts down all subscriptions when the server stops
+

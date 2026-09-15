@@ -8,9 +8,8 @@ area: get-started
 Install the memQL Cockpit, connect to an engine, and run your first agent. This
 takes about five minutes.
 
-> This page is written for the site and is pending an official version in the
-> memQL engine repository. The install command is real and hosted at
-> memql.io/install.sh; it requires a published memQL Cockpit release to download.
+> This page is written for the site, pending an official version in the memQL
+> engine repository. The install command below is live (macOS + Linux).
 
 ## Requirements
 
@@ -59,7 +58,6 @@ memql --version
 
 ## Where to go next
 
-- **What is MemQL** — the platform, the modules it runs, and the clients you build on it.
-- **The harness module** — the proof-driven tour of the module that runs agents.
+- **Why it's a harness, not a library** — the proof behind the positioning.
 - **The language (MQL)** — every behavior in the system is a typed construct.
 - **Concepts** — the data model, events, and the graph the memory lives in.

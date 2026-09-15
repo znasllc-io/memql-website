@@ -1,0 +1,144 @@
+# Keep this site's versioned docs in step with the engine's releases.
+#
+# WHY THIS EXISTS. The site does not author docs: it renders a per-release
+# bundle the engine produces, unpacked into src/content/docs/<version>/. Until
+# now the only thing that ever ran that sync was a launchd job on one
+# maintainer's Mac (scripts/io.memql.docs-sync.plist), and nothing connected
+# that job to a commit. The sync ran faithfully for months and the results
+# stayed on that machine -- so this repository, its CI, and every deployment
+# built from it served docs frozen at 0.15.0 while the engine shipped 0.21.25.
+# Sixty-eight versions of drift, invisible because the local machine always
+# looked right.
+#
+# A sync that is not committed is not a sync. This workflow is the commit half.
+#
+# IT OPENS A PULL REQUEST AND STOPS THERE, deliberately. New docs change what
+# the public site says; that wants CI and a human, not an unreviewed push.
+#
+# WHY IT ALSO INSTALLS GO. scripts/docs-autosync.mjs prefers the release's
+# docs-<X.Y.Z>.tgz asset, but the engine's pipeline STOPPED attaching that asset
+# after 0.11.2 -- which is the original cause of the drift. Its fallback builds
+# the bundle from the tag using the engine's own scripts/docs/build-docs-bundle.sh,
+# and that generates the concept catalog with Go (cmd/docs-gen). Without a Go
+# toolchain the fallback fails and this workflow would quietly do nothing for
+# every version past 0.11.2 -- i.e. reproduce the exact bug it exists to fix.
+#
+# THIS DOES NOT MAKE THE BUILD FETCH ANYTHING. `npm run build` stays offline and
+# reproducible: it renders whatever docs are committed. Nothing here runs at
+# deploy time.
+
+name: docs-sync
+
+on:
+  schedule:
+    # 07:30 UTC Mondays, half an hour behind engine-version-watch so the two
+    # never open PRs into the same minute. Weekly is the right cadence for a
+    # drift measured in months; daily would just reopen the same PR against
+    # releases nobody has read yet.
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: docs-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: sync docs from engine releases
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # For the engine's build-docs-bundle.sh fallback. See the header.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+          cache: false
+
+      - name: install the surface's deps
+        run: npm ci --no-audit --no-fund
+
+      - name: record the version before syncing
+        id: before
+        run: |
+          set -euo pipefail
+          latest="$(node -p "require('./src/content/docs/versions.json').latest")"
+          count="$(node -p "require('./src/content/docs/versions.json').versions.length")"
+          echo "latest=${latest}" >> "$GITHUB_OUTPUT"
+          echo "INFO: committed docs are at ${latest} (${count} versions)"
+
+      - name: sync
+        env:
+          # docs-autosync.mjs shells out to `gh` to list releases, download
+          # assets and clone the engine; and fetch-docs-bundle.mjs reads the
+          # same variable for its REST calls.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/docs-autosync.mjs
+
+      - name: open a PR when there is anything new
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BEFORE: ${{ steps.before.outputs.latest }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- src/content/docs \
+            && [ -z "$(git ls-files --others --exclude-standard src/content/docs)" ]; then
+            echo "INFO: docs already current at ${BEFORE}; nothing to do"
+            exit 0
+          fi
+
+          after="$(node -p "require('./src/content/docs/versions.json').latest")"
+          branch="docs-sync/${after}"
+
+          # An existing branch means this PR is already open, or was closed on
+          # purpose. Either way, reopening it weekly is noise.
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "INFO: ${branch} already exists -- a docs PR for ${after} is open or was closed deliberately"
+            exit 0
+          fi
+
+          git config user.name  "docs-sync"
+          git config user.email "noreply@github.com"
+          git checkout -b "$branch"
+          git add src/content/docs
+          git commit -m "content(docs): sync docs ${BEFORE} -> ${after}"
+          git push -u origin "$branch"
+
+          added="$(git show --stat --oneline HEAD | tail -1)"
+          {
+            echo "The engine has published docs the site does not carry."
+            echo
+            echo "| | version |"
+            echo "|---|---|"
+            echo "| committed before | \`${BEFORE}\` |"
+            echo "| committed now | \`${after}\` |"
+            echo
+            echo "\`${added}\`"
+            echo
+            echo "### Why this is a PR and not a push"
+            echo "These are the words on the public docs site. They want the same review"
+            echo "any other content change gets."
+            echo
+            echo "### Before merging"
+            echo "- The \`clients\` CI lane builds this surface; a docs bundle that does not"
+            echo "  render will fail there rather than on the deployed site."
+            echo "- Spot-check the newest version renders: \`/docs/${after}/getting-started\`."
+            echo
+            echo "_Opened by \`.github/workflows/docs-sync.yml\`._"
+          } > /tmp/docs-pr-body.md
+
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "content(docs): sync docs ${BEFORE} -> ${after}" \
+            --body-file /tmp/docs-pr-body.md
