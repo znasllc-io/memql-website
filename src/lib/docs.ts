@@ -49,9 +49,49 @@ export function resolveVersion(label: string): string {
   return label;
 }
 
-// Every routable version label, including the "latest" alias.
+/**
+ * The versions this build PUBLISHES — by default, only the newest.
+ *
+ * WHY NOT ALL OF THEM. The registry carries every engine release that has ever
+ * shipped docs, and each one is a complete 108-page manual. Building all of
+ * them produced a 5.5 GB site (8436 pages) that exhausted the CI runner's disk
+ * — and 96-99% of it was duplication: consecutive patch releases differ by one
+ * file out of 108. Publishing the newest alone is 108 pages and ~81 MB.
+ *
+ * NOTHING IS LOST. Every version stays committed under src/content/docs/. This
+ * function decides what gets RENDERED, not what is kept — restoring an older
+ * line is this one setting, not a recovery job.
+ *
+ * DOCS_PUBLISH_VERSIONS overrides it without a code change:
+ *   "all"                     every version in the registry
+ *   "0.21.25,0.20.28,0.19.9"  exactly those (unknown ones ignored)
+ * Use it to republish an older line for a client still running that engine —
+ * memQL's own rule is docs version == engine release.
+ */
+export function publishedVersions(): string[] {
+  const registry = getRegistry();
+  const known = registry.versions.map((v) => v.version);
+  const override = (process.env.DOCS_PUBLISH_VERSIONS ?? "").trim();
+
+  if (override === "all") return known;
+  if (override) {
+    const asked = override.split(",").map((s) => s.trim()).filter(Boolean);
+    const found = asked.filter((v) => known.includes(v));
+    // A typo here would silently publish less than intended, and the symptom
+    // is a 404 nobody connects back to an env var.
+    for (const miss of asked.filter((v) => !known.includes(v))) {
+      console.warn(`[docs] DOCS_PUBLISH_VERSIONS names ${miss}, which is not in versions.json — ignored`);
+    }
+    if (found.length) return found;
+  }
+  return [registry.latest];
+}
+
+// Every routable version label, including the "latest" alias. Deliberately the
+// PUBLISHED set: offering a version in the picker that was never built is a
+// link straight to a 404.
 export function versionLabels(): string[] {
-  return ["latest", ...getRegistry().versions.map((v) => v.version)];
+  return ["latest", ...publishedVersions()];
 }
 
 export function loadManifest(label: string): Manifest {

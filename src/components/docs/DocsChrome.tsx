@@ -1,6 +1,6 @@
 import DocsHeader from "@/components/docs/DocsHeader";
 import DocsSidebar from "@/components/docs/DocsSidebar";
-import { getNav, getRegistry, resolveVersion } from "@/lib/docs";
+import { getNav, getRegistry, publishedVersions, resolveVersion } from "@/lib/docs";
 
 /**
  * Server-rendered docs shell: the version-aware header (with the version
@@ -17,6 +17,10 @@ export default function DocsChrome({
 }) {
   const sections = getNav(version);
   const registry = getRegistry();
+  // Only what this build rendered. The registry lists every release ever, and
+  // the picker must not offer a version that has no pages behind it.
+  const published = new Set(publishedVersions());
+  const offered = registry.versions.filter((v) => published.has(v.version));
 
   return (
     <>

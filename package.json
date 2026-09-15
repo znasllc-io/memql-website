@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "og-image": "node scripts/og-image.mjs"
+    "og-image": "node scripts/og-image.mjs",
+    "postbuild": "node scripts/make-version-redirects.mjs"
   },
   "dependencies": {
     "next": "^16.3.0",
