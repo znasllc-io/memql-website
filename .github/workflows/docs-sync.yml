@@ -75,8 +75,32 @@ jobs:
           echo "latest=${latest}" >> "$GITHUB_OUTPUT"
           echo "INFO: committed docs are at ${latest} (${count} versions)"
 
+      # THE FLOOR, and it is not optional.
+      #
+      # docs-autosync.mjs fetches every engine release at or above
+      # DOCS_AUTOSYNC_FLOOR that is MISSING from versions.json, and its default
+      # floor is 0.12.0. This repository deliberately carries only the newest
+      # version -- the archived ones were deleted, because 88 complete manuals
+      # differing by one file each is not an archive, it is millions of lines of
+      # duplication in a pull request.
+      #
+      # With the default floor, the very first scheduled run would see every
+      # version from 0.12.0 upward as "missing" and download all of them back.
+      # The deletion would silently undo itself within a week.
+      #
+      # So the floor is the newest version already present: this job can only
+      # ever ADD releases newer than what is committed.
+      - name: pin the sync floor to what is already committed
+        id: floor
+        run: |
+          set -euo pipefail
+          floor="$(node -p "require('./src/content/docs/versions.json').latest")"
+          echo "floor=${floor}" >> "$GITHUB_OUTPUT"
+          echo "INFO: will fetch only releases newer than ${floor}"
+
       - name: sync
         env:
+          DOCS_AUTOSYNC_FLOOR: ${{ steps.floor.outputs.floor }}
           # docs-autosync.mjs shells out to `gh` to list releases, download
           # assets and clone the engine; and fetch-docs-bundle.mjs reads the
           # same variable for its REST calls.
